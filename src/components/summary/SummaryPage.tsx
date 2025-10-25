@@ -1,0 +1,1 @@
+// This component can be removed as its functionality is now in Summary.tsx
