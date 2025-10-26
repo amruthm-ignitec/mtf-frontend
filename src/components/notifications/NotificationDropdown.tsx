@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Clock, AlertCircle, CheckCircle, XCircle, Brain, Settings, UserCheck } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, XCircle, Brain, Settings, UserCheck } from 'lucide-react';
 
 interface Notification {
   id: string;

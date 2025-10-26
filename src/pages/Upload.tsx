@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { 
   Upload as UploadIcon, 
@@ -8,8 +8,12 @@ import {
   AlertCircle,
   Link as LinkIcon,
   Database,
-  Loader2
+  Loader2,
+  Users
 } from 'lucide-react';
+import { apiService } from '../services/api';
+import { Donor } from '../types/donor';
+import DocumentStatusSlider, { DocumentStatus } from '../components/ui/DocumentStatusSlider';
 
 interface UploadedFile {
   id: string;
@@ -19,6 +23,7 @@ interface UploadedFile {
   documentType: string;
   error?: string;
   stored_document_id?: number;
+  documentStatus?: DocumentStatus;
 }
 
 const DOCUMENT_TYPES = [
@@ -30,20 +35,59 @@ const DOCUMENT_TYPES = [
   'Death Certificate'
 ];
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB in bytes
 
 export default function Upload() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [selectedDonorId, setSelectedDonorId] = useState<number | null>(null);
+  const [loadingDonors, setLoadingDonors] = useState(true);
+
+  // Fetch donors on component mount
+  useEffect(() => {
+    const fetchDonors = async () => {
+      try {
+        setLoadingDonors(true);
+        const donorsData = await apiService.getDonors();
+        setDonors(donorsData);
+      } catch (err) {
+        console.error('Failed to fetch donors:', err);
+        setError('Failed to load donors. Please refresh the page.');
+      } finally {
+        setLoadingDonors(false);
+      }
+    };
+
+    fetchDonors();
+  }, []);
+
+  // Clear error when donor is selected
+  useEffect(() => {
+    if (selectedDonorId && error === 'Please select a donor before uploading files.') {
+      setError(null);
+    }
+  }, [selectedDonorId, error]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (!selectedDonorId) {
+      setError('Please select a donor before uploading files.');
+      return;
+    }
+
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setError('You must be logged in to upload files. Please log in and try again.');
+      return;
+    }
     // Filter out files that are too large
     const validFiles = acceptedFiles.filter(file => file.size <= MAX_FILE_SIZE);
     const oversizedFiles = acceptedFiles.filter(file => file.size > MAX_FILE_SIZE);
 
     if (oversizedFiles.length > 0) {
-      setError(`${oversizedFiles.length} file(s) exceeded the 10MB limit and were skipped.`);
+      setError(`${oversizedFiles.length} file(s) exceeded the 500MB limit and were skipped.`);
     }
 
     if (validFiles.length === 0) return;
@@ -53,7 +97,8 @@ export default function Upload() {
       file,
       progress: 0,
       status: 'uploading' as const,
-      documentType: 'Medical History' // default value
+      documentType: 'Medical History', // default value
+      documentStatus: 'uploaded' as DocumentStatus
     }));
 
     setUploadedFiles(prev => [...prev, ...newFiles]);
@@ -64,16 +109,27 @@ export default function Upload() {
     await Promise.all(newFiles.map(async (fileObj) => {
       const formData = new FormData();
       formData.append('file', fileObj.file);
-      formData.append('documentType', fileObj.documentType);
+      formData.append('document_type', fileObj.documentType);
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/upload`, {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/documents/upload?donor_id=${selectedDonorId}`, {
           method: 'POST',
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
           body: formData
         });
 
         if (!response.ok) {
-          throw new Error(await response.text());
+          const errorText = await response.text();
+          if (response.status === 401) {
+            // Clear invalid token and redirect to login
+            localStorage.removeItem('authToken');
+            window.location.href = '/login';
+            return;
+          }
+          throw new Error(errorText);
         }
 
         const data = await response.json();
@@ -81,7 +137,7 @@ export default function Upload() {
         setUploadedFiles(prev => 
           prev.map(f => 
             f.id === fileObj.id 
-              ? { ...f, status: 'completed', progress: 100, stored_document_id: data.document_id } 
+              ? { ...f, status: 'completed', progress: 100, stored_document_id: data.document_id, documentStatus: 'processing' } 
               : f
           )
         );
@@ -91,7 +147,7 @@ export default function Upload() {
         setUploadedFiles(prev => 
           prev.map(f => 
             f.id === fileObj.id 
-              ? { ...f, status: 'error', error: error.message } 
+              ? { ...f, status: 'error', error: (error as Error).message, documentStatus: 'failed' } 
               : f
           )
         );
@@ -99,7 +155,7 @@ export default function Upload() {
     }));
 
     setIsUploading(false);
-  }, []);
+  }, [selectedDonorId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
@@ -107,7 +163,7 @@ export default function Upload() {
       'application/pdf': ['.pdf']
     },
     maxSize: MAX_FILE_SIZE,
-    disabled: isUploading
+    disabled: isUploading || !selectedDonorId
   });
 
   const handleTypeChange = async (fileId: string, newType: string) => {
@@ -185,6 +241,44 @@ export default function Upload() {
         </p>
       </div>
 
+      {/* Donor Selection */}
+      <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-base font-medium text-gray-900 mb-4 flex items-center">
+          <Users className="w-5 h-5 mr-2 text-blue-600" />
+          Select Donor
+        </h2>
+        {loadingDonors ? (
+          <div className="flex items-center">
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            <span className="text-sm text-gray-500">Loading donors...</span>
+          </div>
+        ) : (
+          <div className="max-w-md">
+            <select
+              value={selectedDonorId || ''}
+              onChange={(e) => {
+                setSelectedDonorId(Number(e.target.value) || null);
+                setError(null); // Clear any existing error when donor is selected
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              disabled={isUploading}
+            >
+              <option value="">Select a donor...</option>
+              {donors.map((donor) => (
+                <option key={donor.id} value={donor.id}>
+                  {donor.name} (ID: {donor.unique_donor_id})
+                </option>
+              ))}
+            </select>
+            {selectedDonorId && (
+              <p className="mt-2 text-sm text-green-600">
+                ✓ Selected donor: {donors.find(d => d.id === selectedDonorId)?.name}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Error Alert */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
@@ -228,17 +322,17 @@ export default function Upload() {
           {...getRootProps()} 
           className={`border-2 border-dashed rounded-lg p-8 transition-colors duration-150 cursor-pointer
             ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}
-            ${isUploading ? 'cursor-not-allowed opacity-50' : ''}
+            ${isUploading || !selectedDonorId ? 'cursor-not-allowed opacity-50' : ''}
           `}
         >
           <input {...getInputProps()} disabled={isUploading} />
           <div className="text-center">
             <UploadIcon className="mx-auto h-10 w-10 text-gray-400" />
             <p className="mt-2 text-sm font-medium text-gray-900">
-              {isDragActive ? 'Drop the files here' : 'Drag and drop PDF files here'}
+              {!selectedDonorId ? 'Please select a donor first' : isDragActive ? 'Drop the files here' : 'Drag and drop PDF files here'}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              or click to select files from your computer (max 10MB per file)
+              {!selectedDonorId ? 'Select a donor above to enable file upload' : 'or click to select files from your computer (max 500MB per file)'}
             </p>
           </div>
         </div>
@@ -250,52 +344,63 @@ export default function Upload() {
               <h3 className="text-base font-medium text-gray-900 mb-4">
                 Uploaded Documents
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {uploadedFiles.map((fileObj) => (
-                  <div key={fileObj.id} className="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <File className="h-6 w-6 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{fileObj.file.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(fileObj.file.size)}</p>
+                  <div key={fileObj.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-4">
+                        <File className="h-6 w-6 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{fileObj.file.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(fileObj.file.size)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-4">
+                        <select 
+                          className="text-sm border-gray-300 rounded-md pr-8 py-1.5 focus:ring-blue-500 focus:border-blue-500"
+                          value={fileObj.documentType}
+                          onChange={(e) => handleTypeChange(fileObj.id, e.target.value)}
+                          disabled={fileObj.status === 'uploading'}
+                        >
+                          {DOCUMENT_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+
+                        {fileObj.status === 'uploading' && (
+                          <div className="flex items-center space-x-2">
+                            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                            <span className="text-sm text-gray-500">Uploading...</span>
+                          </div>
+                        )}
+                        
+                        {fileObj.status === 'completed' && (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        )}
+                        
+                        {fileObj.status === 'error' && (
+                          <AlertCircle className="h-5 w-5 text-red-500" />
+                        )}
+                        
+                        <button 
+                          onClick={() => handleRemoveFile(fileObj.id)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors duration-150"
+                          disabled={fileObj.status === 'uploading'}
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                      <select 
-                        className="text-sm border-gray-300 rounded-md pr-8 py-1.5 focus:ring-blue-500 focus:border-blue-500"
-                        value={fileObj.documentType}
-                        onChange={(e) => handleTypeChange(fileObj.id, e.target.value)}
-                        disabled={fileObj.status === 'uploading'}
-                      >
-                        {DOCUMENT_TYPES.map(type => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-
-                      {fileObj.status === 'uploading' && (
-                        <div className="flex items-center space-x-2">
-                          <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                          <span className="text-sm text-gray-500">Uploading...</span>
-                        </div>
-                      )}
-                      
-                      {fileObj.status === 'completed' && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                      
-                      {fileObj.status === 'error' && (
-                        <AlertCircle className="h-5 w-5 text-red-500" title={fileObj.error} />
-                      )}
-                      
-                      <button 
-                        onClick={() => handleRemoveFile(fileObj.id)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors duration-150"
-                        disabled={fileObj.status === 'uploading'}
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
+                    {/* Document Status Slider */}
+                    {fileObj.documentStatus && (
+                      <DocumentStatusSlider
+                        status={fileObj.documentStatus}
+                        progress={fileObj.progress}
+                        errorMessage={fileObj.error}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

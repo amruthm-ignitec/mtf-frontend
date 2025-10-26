@@ -1,406 +1,568 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  BarChart3,
-  FileCheck,
-  AlertTriangle,
-  Clock,
-  AlertCircle,
-  MessageSquare,
   Users,
-  Activity,
-  Calendar,
-  TrendingUp,
-  FileText,
-  CheckCircle2,
-  XCircle,
-  Zap,
-  Brain,
+  UserPlus,
+  Edit3,
+  Trash2,
+  Search,
+  Shield,
   UserCheck,
-  Scale
+  UserX,
+  Settings,
+  Key,
+  BarChart3
 } from 'lucide-react';
+import { User, UserCreate, UserUpdate } from '../types/auth';
+import { useUsers, useSettings } from '../hooks';
+import { formatDate } from '../utils';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import StatsCard from '../components/ui/StatsCard';
+import Table from '../components/ui/Table';
+import UserCreateForm from '../components/user/UserCreateForm';
+import UserEditForm from '../components/user/UserEditForm';
+
+type AdminTab = 'overview' | 'users' | 'settings';
 
 export default function Admin() {
+  const { users, loading, createUser, updateUser, deleteUser } = useUsers();
+  const { settings, loading: settingsLoading, updateSettings } = useSettings();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'doc_uploader' | 'medical_director'>('all');
+  const [settingsForm, setSettingsForm] = useState({
+    openai_api_key: '',
+    openai_embedding_model: 'text-embedding-ada-002',
+    openai_summarization_model: 'gpt-3.5-turbo',
+    azure_api_key: '',
+    azure_endpoint: '',
+    azure_deployment_id: '',
+    google_api_key: '',
+    google_project_id: '',
+    anthropic_api_key: ''
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const handleUserCreated = async (userData: UserCreate) => {
+    try {
+      await createUser(userData);
+      setShowCreateForm(false);
+    } catch (err) {
+      console.error('Failed to create user:', err);
+    }
+  };
+
+  const handleUserUpdated = async (userId: number, userData: UserUpdate) => {
+    try {
+      await updateUser(userId, userData);
+      setEditingUser(null);
+    } catch (err) {
+      console.error('Failed to update user:', err);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteUser(userId);
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+    }
+  };
+
+  const handleSettingsChange = (key: string, value: string) => {
+    setSettingsForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await updateSettings(settingsForm);
+      alert('Settings saved successfully!');
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  // Update settings form when settings are loaded
+  React.useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      setSettingsForm(prev => ({
+        ...prev,
+        ...settings
+      }));
+    }
+  }, [settings]);
+
+  // Handle URL parameter to switch to settings tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'settings') {
+      setActiveTab('settings');
+    }
+  }, [searchParams]);
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const userStats = {
+    total: users.length,
+    admins: users.filter(u => u.role === 'admin').length,
+    docUploaders: users.filter(u => u.role === 'doc_uploader').length,
+    medicalDirectors: users.filter(u => u.role === 'medical_director').length,
+    active: users.filter(u => u.is_active).length,
+    inactive: users.filter(u => !u.is_active).length
+  };
+
+  const tableColumns = [
+    {
+      key: 'user',
+      title: 'User',
+      render: (user: User) => (
+        <div className="flex items-center">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+            <Users className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
+            <p className="text-xs text-gray-500">{user.email}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'role',
+      title: 'Role',
+      render: (user: User) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          user.role === 'admin' ? 'bg-red-100 text-red-800' :
+          user.role === 'medical_director' ? 'bg-purple-100 text-purple-800' :
+          'bg-blue-100 text-blue-800'
+        }`}>
+          {user.role === 'admin' ? 'Admin' :
+           user.role === 'medical_director' ? 'Medical Director' :
+           'Document Uploader'}
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      render: (user: User) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {user.is_active ? (
+            <>
+              <UserCheck className="w-3 h-3 mr-1" />
+              Active
+            </>
+          ) : (
+            <>
+              <UserX className="w-3 h-3 mr-1" />
+              Inactive
+            </>
+          )}
+        </span>
+      )
+    },
+    {
+      key: 'created_at',
+      title: 'Created',
+      render: (user: User) => (
+        <span className="text-sm text-gray-500">
+          {formatDate(user.created_at)}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      className: 'text-right',
+      render: (user: User) => (
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={() => setEditingUser(user)}
+            className="text-blue-600 hover:bg-blue-100 p-1 rounded"
+            title="Edit user"
+          >
+            <Edit3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleDeleteUser(user.id)}
+            className="text-red-600 hover:bg-red-100 p-1 rounded"
+            title="Delete user"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )
+    }
+  ];
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'users', label: 'User Management', icon: Users },
+    { id: 'settings', label: 'System Settings', icon: Settings }
+  ];
+
+  if (showCreateForm) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <UserCreateForm
+          onSuccess={handleUserCreated}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      </div>
+    );
+  }
+
+  if (editingUser) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <UserEditForm
+          user={editingUser}
+          onSuccess={handleUserUpdated}
+          onCancel={() => setEditingUser(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Time Critical Alerts */}
-      <div className="mb-8 bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold flex items-center">
-            <Clock className="w-6 h-6 mr-2 text-red-500" />
-            Time Critical Alerts
-          </h2>
-          <span className="text-sm text-gray-500">
-            Last updated: {new Date().toLocaleTimeString()}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Processing Delays */}
-          <div className="bg-red-50 rounded-lg p-6">
-            <h3 className="text-sm font-medium text-red-800 mb-4 flex items-center">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              Critical Processing Delays
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-start">
-                <div>
-                  <p className="text-sm font-medium text-red-900">
-                    Donor ID: 1234 - Exceeding time window
-                  </p>
-                  <p className="text-xs text-red-700 mt-1">
-                    Processing time: 18 hours (6 hours remaining)
-                  </p>
-                  <button className="mt-2 text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full hover:bg-red-200">
-                    Take Action
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Document Deadlines */}
-          <div className="bg-yellow-50 rounded-lg p-6">
-            <h3 className="text-sm font-medium text-yellow-800 mb-4 flex items-center">
-              <Clock className="w-4 h-4 mr-2" />
-              Pending Critical Documents
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-start">
-                <div>
-                  <p className="text-sm font-medium text-yellow-900">
-                    Donor ID: 1235 - Missing critical documents
-                  </p>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    Required within: 4 hours
-                  </p>
-                  <button className="mt-2 text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full hover:bg-yellow-200">
-                    Review Documents
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Current System Status */}
-      <div className="mb-8 bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-6 flex items-center">
-          <Activity className="w-6 h-6 mr-2 text-blue-500" />
-          Current System Status
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-blue-50 p-6 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Processing Queue</p>
-                <p className="text-2xl font-semibold">24</p>
-                <p className="text-sm text-blue-600">4.2 hrs avg. time</p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <Clock className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-6 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Staff Coverage</p>
-                <p className="text-2xl font-semibold">5/6</p>
-                <p className="text-sm text-green-600">Active Staff</p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <UserCheck className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 p-6 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">AI Performance</p>
-                <p className="text-2xl font-semibold">94%</p>
-                <p className="text-sm text-purple-600">Accuracy Rate</p>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <Brain className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-orange-50 p-6 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">SLA Breaches</p>
-                <p className="text-2xl font-semibold">2</p>
-                <p className="text-sm text-orange-600">Requires Attention</p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* System Updates & Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent System Updates */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2 text-indigo-500" />
-            Recent System Updates
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-              <Calendar className="w-5 h-5 text-green-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-green-900">AI Model Update</p>
-                <p className="text-sm text-green-700">New version deployed with improved accuracy</p>
-                <p className="text-xs text-green-500 mt-1">Today at 9:30 AM</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-              <Activity className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-blue-900">Performance Optimization</p>
-                <p className="text-sm text-blue-700">Processing speed improved by 15%</p>
-                <p className="text-xs text-blue-500 mt-1">Yesterday at 4:15 PM</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* System Performance Metrics */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Activity className="w-5 h-5 mr-2 text-blue-500" />
-            System Performance
-          </h3>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Processing Speed</span>
-                <span className="font-medium text-green-600">4.2 min/case</span>
-              </div>
-              <div className="h-2 bg-gray-200 rounded-full">
-                <div className="h-2 bg-green-500 rounded-full" style={{ width: '85%' }} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">AI Model Accuracy</span>
-                <span className="font-medium text-blue-600">94.5%</span>
-              </div>
-              <div className="h-2 bg-gray-200 rounded-full">
-                <div className="h-2 bg-blue-500 rounded-full" style={{ width: '94.5%' }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Add this section after Current System Status */}
-      <div className="mt-8 mb-8">
-        <h2 className="text-xl font-semibold mb-6 flex items-center">
-          <BarChart3 className="w-6 h-6 mr-2 text-indigo-500" />
-          Processing Analytics
-        </h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Time Efficiency */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">Processing Time Efficiency</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Average Processing</span>
-                  <span className="text-green-600">4.2 hrs</span>
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full">
-                  <div className="h-2 bg-green-500 rounded-full" style={{ width: '85%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>24hr Completion Rate</span>
-                  <span className="text-blue-600">92%</span>
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full">
-                  <div className="h-2 bg-blue-500 rounded-full" style={{ width: '92%' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Performance */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">AI Analysis Accuracy</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Document Analysis</p>
-                  <p className="text-xl font-semibold text-green-600">98.5%</p>
-                </div>
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Finding Detection</p>
-                  <p className="text-xl font-semibold text-blue-600">96.2%</p>
-                </div>
-              </div>
-              <div className="text-xs text-gray-500">
-                Based on validation against MD reviews
-              </div>
-            </div>
-          </div>
-
-          {/* Cost Savings */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">Operational Impact</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Time Saved</p>
-                  <p className="text-xl font-semibold text-purple-600">65%</p>
-                  <p className="text-xs text-gray-500">vs. Manual Review</p>
-                </div>
-                <div className="bg-indigo-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Error Reduction</p>
-                  <p className="text-xl font-semibold text-indigo-600">82%</p>
-                  <p className="text-xs text-gray-500">vs. Traditional Methods</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quality Metrics */}
+      {/* Header */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-6 flex items-center">
-          <CheckCircle2 className="w-6 h-6 mr-2 text-green-500" />
-          Quality Metrics
-        </h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Compliance Tracking */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">Compliance & Documentation</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <FileCheck className="w-5 h-5 text-green-500 mr-2" />
-                  <span className="text-sm">Required Documentation</span>
-                </div>
-                <span className="text-sm font-medium text-green-600">98.2% Complete</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Clock className="w-5 h-5 text-blue-500 mr-2" />
-                  <span className="text-sm">Timely Processing</span>
-                </div>
-                <span className="text-sm font-medium text-blue-600">95.7% On Time</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Decision Support Impact */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">Decision Support Impact</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Brain className="w-5 h-5 text-purple-500 mr-2" />
-                  <span className="text-sm">AI-Assisted Decisions</span>
-                </div>
-                <span className="text-sm font-medium text-purple-600">+45% Faster</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <TrendingUp className="w-5 h-5 text-green-500 mr-2" />
-                  <span className="text-sm">Accuracy Improvement</span>
-                </div>
-                <span className="text-sm font-medium text-green-600">+35%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-600">Manage users and system settings</p>
       </div>
 
-      {/* Add this section after Quality Metrics */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-6 flex items-center">
-          <Scale className="w-6 h-6 mr-2 text-indigo-500" />
-          LLM Usage & Billing
-        </h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Token Usage */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">Token Consumption</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Today's Usage</p>
-                  <p className="text-xl font-semibold text-blue-600">245K</p>
-                  <p className="text-xs text-gray-500">tokens</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Monthly Total</p>
-                  <p className="text-xl font-semibold text-green-600">3.2M</p>
-                  <p className="text-xs text-gray-500">tokens</p>
-                </div>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-gray-500">Monthly Limit</span>
-                  <span className="text-xs font-medium">5M tokens</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '64%' }} />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">64% of limit used</p>
-              </div>
-            </div>
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <nav className="flex space-x-8">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as AdminTab)}
+                className={`flex items-center px-1 py-2 border-b-2 font-medium text-sm ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard
+              title="Total Users"
+              value={userStats.total}
+              icon={<Users className="w-6 h-6" />}
+              color="blue"
+            />
+            <StatsCard
+              title="Active Users"
+              value={userStats.active}
+              icon={<UserCheck className="w-6 h-6" />}
+              color="green"
+            />
+            <StatsCard
+              title="Admins"
+              value={userStats.admins}
+              icon={<Shield className="w-6 h-6" />}
+              color="red"
+            />
+            <StatsCard
+              title="Document Uploaders"
+              value={userStats.docUploaders}
+              icon={<UserPlus className="w-6 h-6" />}
+              color="purple"
+            />
           </div>
 
-          {/* Cost Breakdown */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium mb-4">Cost Analysis</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Today's Cost</p>
-                  <p className="text-xl font-semibold text-purple-600">$12.25</p>
-                  <p className="text-xs text-gray-500">@ $0.05/1K tokens</p>
-                </div>
-                <div className="bg-indigo-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500">Monthly Cost</p>
-                  <p className="text-xl font-semibold text-indigo-600">$160.00</p>
-                  <p className="text-xs text-gray-500">Projected: $185.00</p>
-                </div>
+          {/* Quick Actions */}
+          <Card className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Button
+                onClick={() => setActiveTab('users')}
+                className="flex items-center justify-center"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Manage Users
+              </Button>
+              <Button
+                onClick={() => setActiveTab('settings')}
+                variant="secondary"
+                className="flex items-center justify-center"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                System Settings
+              </Button>
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                variant="secondary"
+                className="flex items-center justify-center"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add New User
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard
+              title="Total Users"
+              value={userStats.total}
+              icon={<Users className="w-6 h-6" />}
+              color="blue"
+            />
+            <StatsCard
+              title="Active Users"
+              value={userStats.active}
+              icon={<UserCheck className="w-6 h-6" />}
+              color="green"
+            />
+            <StatsCard
+              title="Inactive Users"
+              value={userStats.inactive}
+              icon={<UserX className="w-6 h-6" />}
+              color="indigo"
+            />
+            <StatsCard
+              title="Medical Directors"
+              value={userStats.medicalDirectors}
+              icon={<Shield className="w-6 h-6" />}
+              color="purple"
+            />
+          </div>
+
+          {/* User Management */}
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-medium text-gray-900">User Management</h2>
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                className="flex items-center"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add User
+              </Button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  icon={<Search className="w-4 h-4" />}
+                />
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">GPT-4</span>
-                  <span className="font-medium text-gray-900">$142.50</span>
+              <div className="sm:w-48">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="doc_uploader">Document Uploader</option>
+                  <option value="medical_director">Medical Director</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Users Table */}
+            <Table
+              data={filteredUsers as unknown as Record<string, unknown>[]}
+              columns={tableColumns as unknown as Array<{ key: string; title: string; render?: (item: unknown) => React.ReactNode; className?: string }>}
+              loading={loading}
+              emptyMessage={
+                searchTerm || roleFilter !== 'all'
+                  ? 'No users match your search criteria.'
+                  : 'No users found.'
+              }
+            />
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <Key className="w-5 h-5 mr-2 text-blue-600" />
+              OpenAI Configuration
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Configure OpenAI API settings for document processing and analysis.
+            </p>
+            
+            {settingsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
+                <span className="text-gray-600">Loading settings...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    OpenAI API Key
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Enter OpenAI API key"
+                    value={settingsForm.openai_api_key || ''}
+                    onChange={(e) => handleSettingsChange('openai_api_key', e.target.value)}
+                    className="font-mono"
+                    disabled={savingSettings}
+                  />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">GPT-3.5</span>
-                  <span className="font-medium text-gray-900">$17.50</span>
-                </div>
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-gray-900">Total Cost</span>
-                    <span className="text-gray-900">$160.00</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Embedding Model
+                    </label>
+                    <select 
+                      value={settingsForm.openai_embedding_model}
+                      onChange={(e) => handleSettingsChange('openai_embedding_model', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={savingSettings}
+                    >
+                      <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                      <option value="text-embedding-3-small">text-embedding-3-small</option>
+                      <option value="text-embedding-3-large">text-embedding-3-large</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Summarization Model
+                    </label>
+                    <select 
+                      value={settingsForm.openai_summarization_model}
+                      onChange={(e) => handleSettingsChange('openai_summarization_model', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={savingSettings}
+                    >
+                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                      <option value="gpt-4">GPT-4</option>
+                      <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    </select>
                   </div>
                 </div>
+                
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleSaveSettings}
+                    disabled={savingSettings}
+                    className="flex items-center"
+                  >
+                    {savingSettings ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Settings'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Azure Configuration */}
+          <Card className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <Settings className="w-5 h-5 mr-2 text-blue-600" />
+              Azure Configuration
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Configure Azure OpenAI settings for enhanced security and compliance.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Azure API Key
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Enter Azure API key"
+                  value={settingsForm.azure_api_key || ''}
+                  onChange={(e) => handleSettingsChange('azure_api_key', e.target.value)}
+                  className="font-mono"
+                  disabled={savingSettings}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Azure Endpoint
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="https://your-resource.openai.azure.com/"
+                    value={settingsForm.azure_endpoint || ''}
+                    onChange={(e) => handleSettingsChange('azure_endpoint', e.target.value)}
+                    disabled={savingSettings}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Deployment ID
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="gpt-4-deployment"
+                    value={settingsForm.azure_deployment_id || ''}
+                    onChange={(e) => handleSettingsChange('azure_deployment_id', e.target.value)}
+                    disabled={savingSettings}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      )}
     </div>
   );
-} 
+}

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Search, FileText, X, Brain, Mic, MicOff } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { MessageSquare, FileText, X, Brain, Mic } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -16,8 +16,8 @@ interface Message {
 // Add this type for speech recognition
 declare global {
   interface Window {
-    webkitSpeechRecognition: any;
-    SpeechRecognition: any;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+    SpeechRecognition: typeof SpeechRecognition;
   }
 }
 
@@ -27,17 +27,18 @@ interface SummaryChatProps {
   donorName?: string; // Add donor name prop
 }
 
-export default function SummaryChat({ donorId, donorName }: SummaryChatProps) {
+export default function SummaryChat({ donorName }: SummaryChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
-  const notificationSound = new Audio('/notification.mp3'); // Add a subtle notification sound file
   const [isListening, setIsListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
 
-  const welcomeMessages: Message[] = [
+  const notificationSound = useMemo(() => new Audio('/notification.mp3'), []);
+  
+  const welcomeMessages: Message[] = useMemo(() => [
     {
       id: 'welcome-1',
       role: 'assistant',
@@ -68,7 +69,7 @@ export default function SummaryChat({ donorId, donorName }: SummaryChatProps) {
       content: '• What are the latest lab results?',
       type: 'suggestion'
     }
-  ];
+  ], []);
 
   useEffect(() => {
     if (isOpen && !hasShownWelcome) {
@@ -81,7 +82,7 @@ export default function SummaryChat({ donorId, donorName }: SummaryChatProps) {
       });
       setHasShownWelcome(true);
     }
-  }, [isOpen, hasShownWelcome]);
+  }, [isOpen, hasShownWelcome, notificationSound, welcomeMessages]);
 
   useEffect(() => {
     scrollToBottom();

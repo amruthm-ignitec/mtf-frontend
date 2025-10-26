@@ -1,13 +1,50 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FindingSummary, DonorRecord, MDSummarySection, FindingType, FindingSeverity, FindingCitation } from '../types';
+import { FindingSummary, DonorRecord, MDSummarySection } from '../types';
 // import { getMockMDSections } from '../services/mockData';
-import { ClinicalInformation, FindingsSection } from '../components/dashboard/ClinicalSections';
+// ClinicalInformation and FindingsSection components moved inline
 import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight } from 'lucide-react';
 import FindingDetailsModal from '../components/modals/FindingDetailsModal';
-import { mockFindings } from '../mocks/findings-data';
 import { mockTissueAnalysis } from '../mocks/tissue-analysis-data';
 import SummaryChat from '../components/chat/SummaryChat';
+
+// Inline components
+const ClinicalInformation = ({ donor }: { donor: DonorRecord }) => (
+  <div className="space-y-6">
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Donor Information</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium text-gray-500">Name</label>
+          <p className="text-sm text-gray-900">{donor.name}</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-500">Age</label>
+          <p className="text-sm text-gray-900">{donor.age || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-500">Gender</label>
+          <p className="text-sm text-gray-900">{donor.gender}</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-500">Cause of Death</label>
+          <p className="text-sm text-gray-900">{donor.causeOfDeath || 'N/A'}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const FindingsSection = () => (
+  <div className="space-y-6">
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Findings Summary</h3>
+      <div className="text-sm text-gray-600">
+        No findings available at this time.
+      </div>
+    </div>
+  </div>
+);
 
 const SUMMARY_TABS = [
   { id: 'overview', label: 'Overview', icon: Layout },
@@ -19,130 +56,9 @@ const SUMMARY_TABS = [
 
 type TabId = typeof SUMMARY_TABS[number]['id'];
 
-const FindingsSection1 = () => {
-  const [selectedCitation, setSelectedCitation] = useState<FindingCitation | null>(null);
-  const [selectedType, setSelectedType] = useState<FindingType | 'all'>('all');
-
-  const getSeverityColor = (severity: FindingSeverity) => {
-    const colors = {
-      critical: 'hover:bg-red-50 hover:border-red-200 hover:text-red-700',
-      moderate: 'hover:bg-yellow-50 hover:border-yellow-200 hover:text-yellow-700',
-      low: 'hover:bg-green-50 hover:border-green-200 hover:text-green-700',
-      good: 'hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'
-    };
-    return colors[severity];
-  };
-
-  const getTypeIcon = (type: FindingType) => {
-    const icons = {
-      contraindication: <AlertCircle className="w-5 h-5 text-red-500" />,
-      quality: <CheckCircle className="w-5 h-5 text-blue-500" />,
-      risk: <AlertTriangle className="w-5 h-5 text-yellow-500" />
-    };
-    return icons[type];
-  };
-
-  return (
-    <div className="flex">
-      {/* Main Findings Area */}
-      <div className="flex-1 pr-4">
-        {/* Filter Tabs */}
-        <div className="mb-6 flex space-x-2">
-          {['all', 'contraindication', 'quality', 'risk'].map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(type as FindingType | 'all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                selectedType === type
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Findings Grid */}
-        <div className="space-y-4">
-          {mockFindings
-            .filter((finding: FindingSummary) => selectedType === 'all' || finding.type === selectedType)
-            .map((finding: FindingSummary) => (
-              <div
-                key={finding.id}
-                className={`p-4 rounded-lg border border-gray-200 bg-white transition-colors ${getSeverityColor(finding.severity)}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
-                    {getTypeIcon(finding.type)}
-                    <div>
-                      <h3 className="font-medium">{finding.category}</h3>
-                      <p className="text-sm mt-1">{finding.description}</p>
-                      
-                      {/* Citations */}
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {finding.citations.map((citation: FindingCitation) => (
-                          <button
-                            key={citation.id}
-                            onClick={() => setSelectedCitation(citation)}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs bg-white bg-opacity-50 hover:bg-opacity-75"
-                          >
-                            <FileText className="w-3 h-3 mr-1" />
-                            {citation.context} (p.{citation.pageNumber})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* AI Confidence */}
-                  <div className="text-right">
-                    <div className="text-xs font-medium mb-1">AI Confidence</div>
-                    <div className="text-sm font-semibold">
-                      {(finding.aiConfidence * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
-
-      {/* Citation Sidebar */}
-      <div className={`w-96 border-l bg-gray-50 p-4 transition-all ${
-        selectedCitation ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        {selectedCitation && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium">Source Document</h3>
-              <button
-                onClick={() => setSelectedCitation(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="bg-white rounded-lg p-4 border">
-              <div className="mb-2 text-sm text-gray-500">{selectedCitation.context}</div>
-              <div className="text-sm">Page {selectedCitation.pageNumber}</div>
-              {/* Mock PDF preview would go here */}
-              <div className="mt-4 bg-gray-100 h-96 rounded flex items-center justify-center text-gray-400">
-                PDF Preview Placeholder
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export default function Summary() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [_searchQuery, _setSearchQuery] = useState('');
-  const [_selectedFilter, _setSelectedFilter] = useState('all');
   const [donor, setDonor] = useState<DonorRecord | null>(null);
   const [mdSections, setMDSections] = useState<MDSummarySection[]>([]);
   const [selectedFinding, setSelectedFinding] = useState<FindingSummary | null>(null);

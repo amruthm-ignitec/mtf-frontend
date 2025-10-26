@@ -1,0 +1,208 @@
+// API service for authentication and donor management
+import { LoginRequest, LoginResponse, User, UserCreate, UserUpdate, ApiError } from '../types/auth';
+import { DonorCreate, DonorUpdate, DonorResponse } from '../types/donor';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+
+class ApiService {
+  private baseURL: string;
+
+  constructor(baseURL: string = API_BASE_URL) {
+    this.baseURL = baseURL;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    const token = localStorage.getItem('authToken');
+
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        const errorData: ApiError = await response.json();
+        
+        // If token is invalid, clear it from localStorage
+        if (response.status === 401 && errorData.message === "Could not validate credentials") {
+          this.removeToken();
+          // Redirect to login page
+          window.location.href = '/login';
+        }
+        
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  // Authentication methods
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    return this.request<LoginResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  }
+
+  async getCurrentUser(): Promise<User> {
+    return this.request<User>('/auth/me');
+  }
+
+  async logout(): Promise<void> {
+    return this.request<void>('/auth/logout', {
+      method: 'POST',
+    });
+  }
+
+  // Token management
+  getToken(): string | null {
+    return localStorage.getItem('authToken');
+  }
+
+  setToken(token: string): void {
+    localStorage.setItem('authToken', token);
+  }
+
+  removeToken(): void {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
+  }
+
+  // Token validation
+  isTokenValid(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp > currentTime;
+    } catch {
+      return false;
+    }
+  }
+
+  // Get user role from token
+  getUserRole(): string | null {
+    const token = this.getToken();
+    if (!token) return null;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role;
+    } catch {
+      return null;
+    }
+  }
+
+  // Donor management methods
+  async getDonors(skip: number = 0, limit: number = 100): Promise<DonorResponse[]> {
+    return this.request<DonorResponse[]>(`/donors/?skip=${skip}&limit=${limit}`);
+  }
+
+  async getDonor(donorId: number): Promise<DonorResponse> {
+    return this.request<DonorResponse>(`/donors/${donorId}`);
+  }
+
+  async createDonor(donor: DonorCreate): Promise<DonorResponse> {
+    return this.request<DonorResponse>('/donors/', {
+      method: 'POST',
+      body: JSON.stringify(donor),
+    });
+  }
+
+  async updateDonor(donorId: number, donor: DonorUpdate): Promise<DonorResponse> {
+    return this.request<DonorResponse>(`/donors/${donorId}`, {
+      method: 'PUT',
+      body: JSON.stringify(donor),
+    });
+  }
+
+  async deleteDonor(donorId: number): Promise<void> {
+    return this.request<void>(`/donors/${donorId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateDonorPriority(donorId: number, isPriority: boolean): Promise<DonorResponse> {
+    return this.request<DonorResponse>(`/donors/${donorId}/priority`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_priority: isPriority }),
+    });
+  }
+
+  // Document management methods
+  async getDonorDocuments(donorId: number): Promise<unknown[]> {
+    return this.request<unknown[]>(`/documents/donor/${donorId}`);
+  }
+
+  async getDocumentStatus(documentId: number): Promise<unknown> {
+    return this.request<unknown>(`/documents/${documentId}/status`);
+  }
+
+  async deleteDocument(documentId: number): Promise<void> {
+    return this.request<void>(`/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // User management methods (Admin only)
+  async getUsers(): Promise<User[]> {
+    return this.request<User[]>('/users');
+  }
+
+  async getUser(userId: number): Promise<User> {
+    return this.request<User>(`/users/${userId}`);
+  }
+
+  async createUser(userData: UserCreate): Promise<User> {
+    return this.request<User>('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async updateUser(userId: number, userData: UserUpdate): Promise<User> {
+    return this.request<User>(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    return this.request<void>(`/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Settings management methods (Admin only)
+  async getSettings(): Promise<Record<string, string | null>> {
+    return this.request<Record<string, string | null>>('/settings');
+  }
+
+  async updateSettings(settings: Record<string, string | null>): Promise<Record<string, string | null>> {
+    return this.request<Record<string, string | null>>('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+}
+
+export const apiService = new ApiService();

@@ -1,17 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Bell, 
-  Monitor, 
-  Lock, 
-  Mail, 
-  Shield, 
   Sliders, 
-  Eye, 
-  BellRing,
-  Save,
   Brain,
-  Key,
-  Database,
   ChevronDown,
   MessageSquare
 } from 'lucide-react';
@@ -53,11 +44,7 @@ export default function Settings() {
     showAIConfidence: true
   });
 
-  const [accessibility, setAccessibility] = useState({
-    fontSize: 'normal',
-    contrast: 'normal',
-    reduceMotion: false
-  });
+  // Removed unused accessibility state
 
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4');
   const [apiCredentials, setApiCredentials] = useState({
@@ -438,7 +425,7 @@ export default function Settings() {
     </div>
   );
 
-  const [prompts, setPrompts] = useState<CustomPrompt[]>([
+  const [prompts] = useState<CustomPrompt[]>([
     {
       id: '1',
       title: 'Tissue Eligibility Check',

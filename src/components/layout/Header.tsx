@@ -1,9 +1,12 @@
-import { Link } from 'react-router-dom';
-import { Upload, List, User, Layout, LayoutDashboard, Brain, Settings, HelpCircle, LogOut, ChevronDown, Bell } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Upload, List, User, LayoutDashboard, Brain, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import NotificationDropdown from '../notifications/NotificationDropdown';
 
 export default function Header() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
@@ -26,6 +29,28 @@ export default function Header() {
     };
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrator';
+      case 'doc_uploader':
+        return 'Document Uploader';
+      case 'medical_director':
+        return 'Medical Director';
+      default:
+        return role;
+    }
+  };
+
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto">
@@ -42,18 +67,27 @@ export default function Header() {
           <div className="flex-1 flex justify-between items-center px-4 sm:px-6 lg:px-8">
             <nav className="hidden sm:ml-6 sm:flex sm:space-x-4">
               <Link
-                to="/admin"
+                to="/dashboard"
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
               >
                 <LayoutDashboard className="w-4 h-4 mr-2" />
                 Dashboard
               </Link>
+              {user?.role === 'admin' && (
+                <Link
+                  to="/donors"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Donors
+                </Link>
+              )}
               <Link
-                to="/summary/1"
+                to="/admin?tab=settings"
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
               >
-                <Layout className="w-4 h-4 mr-2" />
-                Summary
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
               </Link>
               <Link
                 to="/intelligence"
@@ -99,12 +133,16 @@ export default function Header() {
                   className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
                 >
                   <User className="w-4 h-4 mr-2" />
-                  Antony Linus
+                  {user?.full_name || 'User'}
                   <ChevronDown className="w-4 h-4 ml-1" />
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                      <p className="text-xs text-gray-500">{getRoleDisplayName(user?.role || '')}</p>
+                    </div>
                     <Link
                       to="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -127,7 +165,7 @@ export default function Header() {
                       Support
                     </Link>
                     <button
-                      onClick={() => {/* Add logout logic */}}
+                      onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <LogOut className="w-4 h-4 mr-2" />

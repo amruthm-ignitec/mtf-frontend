@@ -1,40 +1,56 @@
-import { FindingSummary } from './finding';
-
-export interface Donor {
-  id: string;
-  donorName: string;
-  findings: FindingSummary[];
-}
-
-export interface DonorRecord extends Donor {
-  status: ProcessingStatus;
-  requiredDocuments: RequiredDocument[];
-  processingStatus: ProcessingStatus;
-  uploadTimestamp: Date | string;
-  causeOfDeath?: string;
-  documents?: any[];
-}
-
-export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'rejected' | 'failed' | 'uploaded';
-
-export interface RequiredDocument {
-  id: string;
+// Donor types matching the backend API
+export interface Donor extends Record<string, unknown> {
+  id: number;
+  unique_donor_id: string;
   name: string;
-  status: DocumentStatus;
-  type?: string;
-  label?: string;
-  isRequired?: boolean;
+  age?: number;
+  date_of_birth?: string; // ISO date string
+  gender: string;
+  is_priority: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
-export type DocumentStatus = 'missing' | 'processing' | 'completed' | 'uploaded' | 'invalid';
-
-export interface MDSummarySection {
-  id: string;
-  title: string;
-  content: string;
-  status?: string;
-  details?: string;
-  pageReferences?: string[];
+export interface DonorCreate {
+  unique_donor_id: string;
+  name: string;
+  age?: number;
+  date_of_birth?: string;
+  gender: string;
+  is_priority: boolean;
 }
 
-export type TissueType = 'bone' | 'skin' | 'heart_valve' | 'vessels' | 'cornea' | 'tendons' | 'ligaments' | 'veins' | 'fascia';
+export interface DonorUpdate {
+  name?: string;
+  age?: number;
+  date_of_birth?: string;
+  gender?: string;
+  is_priority?: boolean;
+}
+
+export type DonorResponse = Donor;
+
+// Gender options
+export type Gender = 'Male' | 'Female' | 'Other';
+
+// Priority levels
+export type PriorityLevel = 'Normal' | 'High';
+
+// Form validation
+export interface DonorFormData {
+  unique_donor_id: string;
+  name: string;
+  age?: number;
+  date_of_birth?: string;
+  gender: Gender;
+  is_priority: boolean;
+}
+
+export interface DonorFormErrors {
+  unique_donor_id?: string;
+  name?: string;
+  age?: string;
+  date_of_birth?: string;
+  gender?: string;
+  is_priority?: string;
+}

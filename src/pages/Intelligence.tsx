@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, ChevronRight, TrendingUp, Scale, MessageSquare, ChevronDown, ChevronUp, FileText, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Brain, TrendingUp, Scale, MessageSquare, ChevronDown, ChevronUp, FileText, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { mockTissueAnalysis } from '../mocks/tissue-analysis-data';
 import { mockCVAnalysis } from '../mocks/cv-analysis-data';
 import { mockSkinAnalysis } from '../mocks/skin-analysis-data';
@@ -74,7 +74,7 @@ export default function Intelligence() {
 
   const renderTissueSpecificDetails = (tissue: TissueAnalysis) => {
     switch (selectedTissueType) {
-      case 'CV':
+      case 'CV': {
         const cvTissue = tissue as CVTissueAnalysis;
         return cvTissue.measurements && (
           <div className="mt-2 grid grid-cols-2 gap-4 bg-blue-50 p-3 rounded-lg">
@@ -90,8 +90,9 @@ export default function Intelligence() {
             )}
           </div>
         );
+      }
 
-      case 'Skin':
+      case 'Skin': {
         const skinTissue = tissue as SkinTissueAnalysis;
         return skinTissue.dimensions && (
           <div className="mt-2 grid grid-cols-2 gap-4 bg-green-50 p-3 rounded-lg">
@@ -107,8 +108,9 @@ export default function Intelligence() {
             </div>
           </div>
         );
+      }
 
-      case 'Eyes':
+      case 'Eyes': {
         const eyeTissue = tissue as EyeTissueAnalysis;
         return eyeTissue.cornealProperties && (
           <div className="mt-2 grid grid-cols-2 gap-4 bg-purple-50 p-3 rounded-lg">
@@ -124,6 +126,7 @@ export default function Intelligence() {
             </div>
           </div>
         );
+      }
 
       default:
         return null;
