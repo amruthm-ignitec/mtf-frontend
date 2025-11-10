@@ -1,6 +1,7 @@
 // API service for authentication and donor management
 import { LoginRequest, LoginResponse, User, UserCreate, UserUpdate, ApiError } from '../types/auth';
 import { DonorCreate, DonorUpdate, DonorResponse } from '../types/donor';
+import { ExtractionDataResponse } from '../types/extraction';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -161,6 +162,11 @@ class ApiService {
     return this.request<void>(`/documents/${documentId}`, {
       method: 'DELETE',
     });
+  }
+
+  // Extraction data methods
+  async getDonorExtractionData(donorId: number): Promise<ExtractionDataResponse> {
+    return this.request<ExtractionDataResponse>(`/donor/${donorId}/extraction-data`);
   }
 
   // User management methods (Admin only)

@@ -1,6 +1,7 @@
 // src/types/index.ts
 export * from './donor';
 export * from './finding';
+export * from './extraction';
 
 export type FindingType = 'contraindication' | 'quality' | 'risk';
 export type FindingSeverity = 'critical' | 'moderate' | 'low' | 'good';

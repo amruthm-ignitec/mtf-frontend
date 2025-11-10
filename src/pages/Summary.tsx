@@ -1,12 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { FindingSummary, DonorRecord, MDSummarySection } from '../types';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { FindingSummary, DonorRecord, MDSummarySection, ExtractionDataResponse } from '../types';
 // import { getMockMDSections } from '../services/mockData';
 // ClinicalInformation and FindingsSection components moved inline
-import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight, UserCheck, FlaskConical, Package, Shield, FileSearch, Droplets } from 'lucide-react';
 import FindingDetailsModal from '../components/modals/FindingDetailsModal';
 import { mockTissueAnalysis } from '../mocks/tissue-analysis-data';
 import SummaryChat from '../components/chat/SummaryChat';
+import { apiService } from '../services/api';
+import PhysicalAssessmentSection from '../components/donor/PhysicalAssessmentSection';
+import AuthorizationSection from '../components/donor/AuthorizationSection';
+import DRAISection from '../components/donor/DRAISection';
+import InfectiousDiseaseSection from '../components/donor/InfectiousDiseaseSection';
+import TissueRecoverySection from '../components/donor/TissueRecoverySection';
+import ComplianceSection from '../components/donor/ComplianceSection';
+import ConditionalDocumentsSection from '../components/donor/ConditionalDocumentsSection';
+import MedicalRecordsReviewSection from '../components/donor/MedicalRecordsReviewSection';
+import PlasmaDilutionSection from '../components/donor/PlasmaDilutionSection';
 
 // Inline components
 const ClinicalInformation = ({ donor }: { donor: DonorRecord }) => (
@@ -49,9 +59,13 @@ const FindingsSection = () => (
 const SUMMARY_TABS = [
   { id: 'overview', label: 'Overview', icon: Layout },
   { id: 'clinical', label: 'Clinical Information', icon: Heart },
-  { id: 'findings', label: 'Co-ordinator Summary', icon: FileText },
-  { id: 'md-summary', label: 'Director Summary', icon: Stethoscope },
-  { id: 'documents', label: 'Documents & Compliance', icon: FileCheck }
+  { id: 'physical-assessment', label: 'Physical Assessment', icon: UserCheck },
+  { id: 'authorization', label: 'Authorization', icon: FileCheck },
+  { id: 'drai', label: 'DRAI', icon: User },
+  { id: 'infectious-disease', label: 'Infectious Disease', icon: FlaskConical },
+  { id: 'tissue-recovery', label: 'Tissue Recovery', icon: Package },
+  { id: 'conditional-docs', label: 'Conditional Tests', icon: FileSearch },
+  { id: 'plasma-dilution', label: 'Plasma Dilution', icon: Droplets }
 ] as const;
 
 type TabId = typeof SUMMARY_TABS[number]['id'];
@@ -59,11 +73,14 @@ type TabId = typeof SUMMARY_TABS[number]['id'];
 export default function Summary() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [donor, setDonor] = useState<DonorRecord | null>(null);
   const [mdSections, setMDSections] = useState<MDSummarySection[]>([]);
   const [selectedFinding, setSelectedFinding] = useState<FindingSummary | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [selectedMDCitation, setSelectedMDCitation] = useState<number | null>(null);
+  const [extractionData, setExtractionData] = useState<ExtractionDataResponse | null>(null);
+  const [loadingExtraction, setLoadingExtraction] = useState(false);
 
   // useEffect(() => {
   //   console.log('Current ID:', id);
@@ -80,42 +97,99 @@ export default function Summary() {
   // }, [id, navigate]);
 
   useEffect(() => {
-    const fetchDonorData = async () => {
+    const loadData = async () => {
+      if (!id) {
+        console.error('No donor ID provided');
+        navigate('/not-found');
+        return;
+      }
+
+      console.log('Summary page loaded with ID:', id);
+      
+      // Check if donor data was passed from previous route
+      const donorFromState = location.state?.donor;
+      console.log('Donor from navigation state:', donorFromState);
+
       try {
-        // setLoading(true);
-        const apiUrl = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${apiUrl}/donor/${id}/details`);
+        // Load test.json data directly instead of fetching from backend
+        console.log('Loading test.json data...');
+        const response = await fetch('/test.json');
         
         if (!response.ok) {
-          if (response.status === 404) {
-            navigate('/not-found');
-            return;
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error('Failed to load test.json');
         }
         
-        const donorData = await response.json();
+        const testData = await response.json();
+        console.log('Test data loaded:', testData);
+        
+        // Set extraction data from test.json
+        setExtractionData(testData as ExtractionDataResponse);
+        
+        // Use donor data from navigation state if available, otherwise create from test.json
+        let donorData: DonorRecord;
+        
+        if (donorFromState) {
+          // Use donor data passed from Documents page
+          donorData = {
+            id: Number(id),
+            donorName: donorFromState.name || `Donor ${id}`,
+            name: donorFromState.name || `Donor ${id}`,
+            age: donorFromState.age || null,
+            gender: donorFromState.gender || testData.extracted_data?.donor_information?.gender?.value || 'Unknown',
+            causeOfDeath: null,
+            uploadTimestamp: donorFromState.created_at || testData.processing_timestamp || new Date().toISOString(),
+            requiredDocuments: [],
+          };
+          console.log('Using donor data from navigation state:', donorData);
+        } else {
+          // Create mock donor data from test.json
+          donorData = {
+            id: Number(id),
+            donorName: testData.extracted_data?.donor_information?.gender?.value 
+              ? `Donor ${testData.donor_id}` 
+              : 'Test Donor',
+            name: testData.extracted_data?.donor_information?.gender?.value 
+              ? `Donor ${testData.donor_id}` 
+              : 'Test Donor',
+            age: null,
+            gender: testData.extracted_data?.donor_information?.gender?.value || 'Unknown',
+            causeOfDeath: null,
+            uploadTimestamp: testData.processing_timestamp || new Date().toISOString(),
+            requiredDocuments: [],
+          };
+          console.log('Using donor data from test.json:', donorData);
+        }
+        
         setDonor(donorData);
+        setLoadingExtraction(false);
         
-        // Fetch MD sections if needed
-        // setMDSections(getMockMDSections());
-        const mdResponse = await fetch(`${apiUrl}/donor/${id}/md-sections`);
-        if (mdResponse.ok) {
-          const mdData = await mdResponse.json();
-          setMDSections(mdData);
-        }
+        // Optionally try to fetch from backend if you want to fallback
+        // But for now, we'll just use the test.json data
+        console.log('Using test.json data - no backend fetch needed');
+        
       } catch (err) {
-        // setError(err instanceof Error ? err.message : 'An error occurred');
-        console.error('Error fetching donor data:', err);
-      } finally {
-        // setLoading(false);
+        console.error('Error loading test data:', err);
+        // Fallback to mock data if test.json fails to load
+        const fallbackDonor: DonorRecord = {
+          id: Number(id),
+          donorName: donorFromState?.name || 'Test Donor',
+          name: donorFromState?.name || 'Test Donor',
+          age: donorFromState?.age || 45,
+          gender: donorFromState?.gender || 'Female',
+          causeOfDeath: null,
+          uploadTimestamp: donorFromState?.created_at || new Date().toISOString(),
+          requiredDocuments: [],
+        };
+        setDonor(fallbackDonor);
+        setLoadingExtraction(false);
       }
     };
 
     if (id) {
-      fetchDonorData();
+      setLoadingExtraction(true);
+      loadData();
     }
-  }, [id, navigate]);
+  }, [id, navigate, location.state]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -221,6 +295,66 @@ export default function Summary() {
               </div>
             )}
 
+            {/* Compliance Status Summary */}
+            {extractionData && (extractionData.compliance_status || extractionData.validation) && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-md font-semibold mb-3 flex items-center">
+                  <Shield className="h-4 w-4 mr-2 text-gray-700" />
+                  Compliance & Validation Status
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {extractionData.compliance_status && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="text-sm">AATB Compliant</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          extractionData.compliance_status.aatb_compliant
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {extractionData.compliance_status.aatb_compliant ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="text-sm">Ready for Distribution</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          extractionData.compliance_status.ready_for_distribution
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {extractionData.compliance_status.ready_for_distribution ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {extractionData.validation && (
+                    <div className="space-y-2">
+                      <div className="p-2 bg-gray-50 rounded">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm">Validation Progress</span>
+                          <span className="text-sm font-semibold text-blue-600">
+                            {extractionData.validation.checklist_status.completion_percentage.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{
+                              width: `${extractionData.validation.checklist_status.completion_percentage}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {extractionData.validation.checklist_status.total_items_complete} /{' '}
+                          {extractionData.validation.checklist_status.total_required_items} items complete
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* AI Intelligence Insights */}
             {donor && (
               <div className="bg-white rounded-lg shadow p-4">
@@ -295,9 +429,6 @@ export default function Summary() {
         );
 
       case 'clinical':
-        return <ClinicalInformation donor={donor} />;
-
-      // case 'clinical':
         return (
           <div className="grid grid-cols-2 gap-6">
             {/* Left Column */}
@@ -309,27 +440,69 @@ export default function Summary() {
                   Infection & Immunology
                 </h3>
                 <div className="space-y-4">
-                  {/* Serology Results */}
-                  <div>
-                    <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { test: 'HIV', result: 'Negative', status: 'success' },
-                        { test: 'HBV', result: 'Negative', status: 'success' },
-                        { test: 'HCV', result: 'Negative', status: 'success' },
-                        { test: 'CMV', result: 'Positive', status: 'warning' }
-                      ].map((item) => (
-                        <div key={item.test} className="bg-gray-50 p-2 rounded">
-                          <div className="text-xs text-gray-500">{item.test}</div>
-                          <div className={`text-sm font-medium ${
-                            item.status === 'success' ? 'text-green-600' : 'text-yellow-600'
-                          }`}>
-                            {item.result}
-                          </div>
+                  {/* Serology Results - Enhanced with extraction data */}
+                  {extractionData?.extracted_data?.infectious_disease_testing ? (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-600">
+                          Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
+                        </p>
+                      </div>
+                      {extractionData.extracted_data.infectious_disease_testing.other_tests && (
+                        <div className="grid grid-cols-2 gap-3">
+                          {Object.entries(extractionData.extracted_data.infectious_disease_testing.other_tests)
+                            .filter(([key, value]) => 
+                              value && 
+                              value.result && 
+                              (key.includes('sample') || key.includes('report') || key.includes('laboratory'))
+                            )
+                            .slice(0, 6)
+                            .map(([key, value]) => (
+                              <div key={key} className="bg-gray-50 p-2 rounded">
+                                <div className="text-xs text-gray-500">{value.test_name}</div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {value.result}
+                                </div>
+                              </div>
+                            ))}
                         </div>
-                      ))}
+                      )}
+                      <div className="mt-2">
+                        <a
+                          href="#infectious-disease"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setActiveTab('infectious-disease');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          View detailed test results →
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { test: 'HIV', result: 'Negative', status: 'success' },
+                          { test: 'HBV', result: 'Negative', status: 'success' },
+                          { test: 'HCV', result: 'Negative', status: 'success' },
+                          { test: 'CMV', result: 'Positive', status: 'warning' }
+                        ].map((item) => (
+                          <div key={item.test} className="bg-gray-50 p-2 rounded">
+                            <div className="text-xs text-gray-500">{item.test}</div>
+                            <div className={`text-sm font-medium ${
+                              item.status === 'success' ? 'text-green-600' : 'text-yellow-600'
+                            }`}>
+                              {item.result}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Culture Results */}
                   <div>
@@ -471,165 +644,81 @@ export default function Summary() {
           </div>
         );
 
-      case 'findings':
-        return <FindingsSection />;
 
-      case 'md-summary':
+      case 'physical-assessment':
+        if (!extractionData?.extracted_data?.physical_assessment) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">Physical assessment data not available.</p>
+            </div>
+          );
+        }
+        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} />;
+
+      case 'authorization':
+        if (!extractionData?.extracted_data?.authorization) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">Authorization data not available.</p>
+            </div>
+          );
+        }
+        return <AuthorizationSection data={extractionData.extracted_data.authorization} />;
+
+      case 'drai':
+        if (!extractionData?.extracted_data?.drai) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">DRAI data not available.</p>
+            </div>
+          );
+        }
+        return <DRAISection data={extractionData.extracted_data.drai} />;
+
+      case 'infectious-disease':
+        if (!extractionData?.extracted_data?.infectious_disease_testing) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">Infectious disease testing data not available.</p>
+            </div>
+          );
+        }
         return (
-          <div className="flex">
-            {/* Main Content */}
-            <div className="flex-1 pr-4 space-y-6">
-              {/* MD Summary Header - Simplified */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-md font-semibold text-gray-900">Medical Director Summary</h2>
-                    <p className="text-xs text-gray-500 mt-1">Last updated: March 15, 2024 10:30 AM EST</p>
-                  </div>
-                  <span className="px-2 py-1 bg-green-50 text-green-700 rounded-md text-xs font-medium">
-                    MD Reviewed
-                  </span>
-                </div>
-
-                {/* Quick Summary Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="text-xs text-gray-500">Total Findings</div>
-                    <div className="text-lg font-semibold mt-1">12</div>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="text-xs text-gray-500">Critical Findings</div>
-                    <div className="text-lg font-semibold text-red-600 mt-1">2</div>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="text-xs text-gray-500">Pages Reviewed</div>
-                    <div className="text-lg font-semibold mt-1">45</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Detailed Sections */}
-              <div className="bg-white rounded-lg shadow">
-                {mdSections.map((section, index) => (
-                  <div
-                    key={index}
-                    className={`p-4 ${
-                      index !== mdSections.length - 1 ? 'border-b border-gray-200' : ''
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2 mb-3">
-                      <h3 className="text-sm font-medium text-gray-900">{section.title}</h3>
-                      <span
-                        className={`px-2 py-1 rounded-md text-xs font-medium ${
-                          section.status === 'Abnormal'
-                            ? 'bg-yellow-50 text-yellow-700'
-                            : section.status === 'No'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        {section.status}
-                      </span>
-                    </div>
-
-                    <div className="text-sm text-gray-600">
-                      <p>{section.details}</p>
-                    </div>
-
-                    {/* Citations and References */}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {section.pageReferences?.map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => setSelectedMDCitation(Number(page))}
-                          className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-50 hover:bg-gray-100 text-gray-600"
-                        >
-                          <FileText className="w-3 h-3 mr-1" />
-                          Page {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Additional Metadata */}
-                    <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500">
-                      <span className="flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        Reviewed 2 hours ago
-                      </span>
-                      <span className="flex items-center">
-                        <User className="w-3 h-3 mr-1" />
-                        Dr. Smith
-                      </span>
-                      {section.aiConfidence && (
-                        <span className="flex items-center">
-                          <Brain className="w-3 h-3 mr-1" />
-                          AI Confidence: {section.aiConfidence}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Citation Sidebar - Keeping consistent with Findings section */}
-            <div className={`w-96 border-l bg-gray-50 p-4 transition-all ${
-              selectedMDCitation ? 'translate-x-0' : 'translate-x-full'
-            }`}>
-              {selectedMDCitation && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-sm font-medium">Source Document</h3>
-                    <button
-                      onClick={() => setSelectedMDCitation(null)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="mb-2 text-xs text-gray-500">Medical Record</div>
-                    <div className="text-sm">Page {selectedMDCitation}</div>
-                    {/* Mock PDF preview would go here */}
-                    <div className="mt-4 bg-gray-50 h-96 rounded-lg flex items-center justify-center text-gray-400 text-sm">
-                      PDF Preview Placeholder
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <InfectiousDiseaseSection
+            data={extractionData.extracted_data.infectious_disease_testing}
+          />
         );
 
-      case 'documents':
-        return (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-6">Documents & Compliance</h2>
-            <div className="space-y-4">
-              {donor?.requiredDocuments?.map((doc, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">{doc.label}</h3>
-                      <p className="text-sm text-gray-500">Required Document</p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        doc.status === 'uploaded'
-                          ? 'bg-green-100 text-green-800'
-                          : doc.status === 'missing'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+      case 'tissue-recovery':
+        if (!extractionData?.extracted_data?.tissue_recovery) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">Tissue recovery data not available.</p>
             </div>
-          </div>
-        );
+          );
+        }
+        return <TissueRecoverySection data={extractionData.extracted_data.tissue_recovery} />;
+
+
+      case 'conditional-docs':
+        if (!extractionData?.conditional_documents) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">Conditional documents data not available.</p>
+            </div>
+          );
+        }
+        return <ConditionalDocumentsSection data={extractionData.conditional_documents} />;
+
+      case 'plasma-dilution':
+        if (!extractionData?.extracted_data?.plasma_dilution) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-500">Plasma dilution data not available.</p>
+            </div>
+          );
+        }
+        return <PlasmaDilutionSection data={extractionData.extracted_data.plasma_dilution} />;
 
       default:
         return null;
@@ -641,14 +730,14 @@ export default function Summary() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-8">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+      <div className="border-b border-gray-200 mb-8 overflow-x-auto">
+        <nav className="-mb-px flex space-x-8 min-w-max" aria-label="Tabs">
           {SUMMARY_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm
+                group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap
                 ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
@@ -671,6 +760,14 @@ export default function Summary() {
           ))}
         </nav>
       </div>
+
+      {/* Loading Indicator for Extraction Data */}
+      {loadingExtraction && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <span className="text-sm text-blue-700">Loading extraction data...</span>
+        </div>
+      )}
 
       {/* Tab Content */}
       {renderTabContent()}

@@ -1,0 +1,130 @@
+import React from 'react';
+import { Authorization } from '../../types/extraction';
+import { FileText, User, Calendar, CheckCircle } from 'lucide-react';
+import StatusBadge from '../ui/StatusBadge';
+import ConfidenceScore from '../ui/ConfidenceScore';
+import SourceDocumentLink from '../ui/SourceDocumentLink';
+import Card from '../ui/Card';
+
+interface AuthorizationSectionProps {
+  data: Authorization;
+}
+
+export default function AuthorizationSection({ data }: AuthorizationSectionProps) {
+  const { form_type, form_use, authorized_party, authorization_datetime, status } = data;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-gray-900">Authorization & Consent</h2>
+        <StatusBadge status={status} />
+      </div>
+
+      {/* Form Information */}
+      <Card className="p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <FileText className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Form Information</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-gray-500">Form Type</label>
+            <p className="text-sm text-gray-900 mt-1">{form_type}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-500">Form Use</label>
+            <p className="text-sm text-gray-900 mt-1">{form_use}</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Authorized Party */}
+      {authorized_party && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <User className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Authorized Party</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Name</label>
+              <p className="text-sm text-gray-900 mt-1">{authorized_party.name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Relationship</label>
+              <p className="text-sm text-gray-900 mt-1">{authorized_party.relationship}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center space-x-4">
+            <ConfidenceScore confidence={authorized_party.confidence} />
+            <SourceDocumentLink
+              document={{
+                source_document: authorized_party.source_document,
+                source_page: authorized_party.source_page,
+              }}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* Authorization Date/Time */}
+      {authorization_datetime && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Calendar className="w-5 h-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Authorization Timeline</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <label className="text-xs font-medium text-gray-500">Authorization Date/Time</label>
+                <p className="text-sm font-semibold text-gray-900 mt-1">
+                  {authorization_datetime.authorization_datetime}
+                </p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <label className="text-xs font-medium text-gray-500">Signature Date/Time</label>
+                <p className="text-sm font-semibold text-gray-900 mt-1">
+                  {authorization_datetime.signature_datetime}
+                </p>
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="text-xs font-medium text-gray-500">Signature Type</label>
+              <p className="text-sm font-semibold text-gray-900 mt-1">
+                {authorization_datetime.signature_type}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center space-x-4">
+            <ConfidenceScore confidence={authorization_datetime.confidence} />
+            <SourceDocumentLink
+              document={{
+                source_document: authorization_datetime.source_document,
+              }}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* Source Documents */}
+      <Card className="p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <CheckCircle className="w-5 h-5 text-gray-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Source Documents</h3>
+        </div>
+        <div className="space-y-2">
+          <SourceDocumentLink
+            document={{
+              source_document: data.source_document,
+              source_pages: data.source_pages,
+            }}
+          />
+          {data.confidence && <ConfidenceScore confidence={data.confidence} />}
+        </div>
+      </Card>
+    </div>
+  );
+}
+

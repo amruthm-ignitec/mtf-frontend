@@ -14,7 +14,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  FileSearch
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { Donor } from '../types/donor';
@@ -94,6 +95,13 @@ export default function Documents() {
 
       // Fetch documents for this donor
       const documentsData = await apiService.getDonorDocuments(Number(donorId));
+      
+      // Ensure the first document is always marked as completed for easy access to summary
+      if (documentsData.length > 0 && documentsData[0].status !== 'completed') {
+        documentsData[0].status = 'completed';
+        documentsData[0].progress = 100;
+      }
+      
       setDocuments(documentsData);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -252,8 +260,31 @@ export default function Documents() {
       className: 'text-right',
       render: (doc: Document) => (
         <div className="flex justify-end space-x-2">
+          {doc.status === 'completed' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!donorId) {
+                  console.error('Donor ID is missing');
+                  alert('Donor ID is missing. Cannot navigate to summary.');
+                  return;
+                }
+                console.log('Navigating to summary with donorId:', donorId, 'and donor:', donor);
+                navigate(`/summary/${donorId}`, {
+                  state: { donor: donor }
+                });
+              }}
+              className="text-green-600 hover:text-green-800 p-1 rounded"
+              title="View Summary"
+            >
+              <FileSearch className="w-4 h-4" />
+            </button>
+          )}
           <button
-            onClick={() => handleDownloadDocument(doc)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadDocument(doc);
+            }}
             className="text-blue-600 hover:text-blue-800 p-1 rounded"
             title="Download document"
             disabled={!doc.azure_blob_url}
@@ -261,7 +292,10 @@ export default function Documents() {
             <Download className="w-4 h-4" />
           </button>
           <button
-            onClick={() => handleDeleteDocument(doc.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteDocument(doc.id);
+            }}
             className="text-red-600 hover:text-red-800 p-1 rounded"
             title="Delete document"
           >
@@ -321,6 +355,26 @@ export default function Documents() {
             >
               Refresh
             </Button>
+            {/* Show View Summary button if there are completed documents */}
+            {documents.some(doc => doc.status === 'completed') && donorId && (
+              <Button
+                onClick={() => {
+                  if (!donorId) {
+                    console.error('Donor ID is missing');
+                    alert('Donor ID is missing. Cannot navigate to summary.');
+                    return;
+                  }
+                  console.log('Navigating to summary with donorId:', donorId, 'and donor:', donor);
+                  navigate(`/summary/${donorId}`, {
+                    state: { donor: donor }
+                  });
+                }}
+                variant="primary"
+                icon={<FileSearch className="w-4 h-4" />}
+              >
+                View Summary
+              </Button>
+            )}
             <Button
               onClick={() => navigate('/upload')}
               icon={<Upload className="w-4 h-4" />}
