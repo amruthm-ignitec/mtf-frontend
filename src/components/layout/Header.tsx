@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Upload, List, User, LayoutDashboard, Brain, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users } from 'lucide-react';
+import { User, LayoutDashboard, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationDropdown from '../notifications/NotificationDropdown';
@@ -82,34 +82,6 @@ export default function Header() {
                   Donors
                 </Link>
               )}
-              <Link
-                to="/admin?tab=settings"
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Link>
-              <Link
-                to="/intelligence"
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
-              >
-                <Brain className="w-4 h-4 mr-2" />
-                Intelligence
-              </Link>
-              <Link
-                to="/upload"
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload
-              </Link>
-              <Link
-                to="/queue"
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
-              >
-                <List className="w-4 h-4 mr-2" />
-                Queue
-              </Link>
             </nav>
             <div className="flex items-center">
               <div className="relative mr-4" ref={notificationRef}>
@@ -145,13 +117,15 @@ export default function Header() {
                     </div>
                     <Link
                       to="/profile"
+                      onClick={() => setIsDropdownOpen(false)}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <User className="w-4 h-4 mr-2" />
                       Profile
                     </Link>
                     <Link
-                      to="/settings"
+                      to="/admin"
+                      onClick={() => setIsDropdownOpen(false)}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <Settings className="w-4 h-4 mr-2" />
@@ -159,6 +133,7 @@ export default function Header() {
                     </Link>
                     <Link
                       to="/support"
+                      onClick={() => setIsDropdownOpen(false)}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <HelpCircle className="w-4 h-4 mr-2" />
