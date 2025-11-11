@@ -19,7 +19,9 @@ import {
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { Donor } from '../types/donor';
+import { ExtractionDataResponse } from '../types/extraction';
 import DocumentStatusSlider, { DocumentStatus } from '../components/ui/DocumentStatusSlider';
+import DocumentChecklist from '../components/donor/DocumentChecklist';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -53,6 +55,7 @@ export default function Documents() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [extractionData, setExtractionData] = useState<ExtractionDataResponse | null>(null);
 
   // Debug logging
   console.log('Documents page loaded with donorId:', donorId);
@@ -103,6 +106,15 @@ export default function Documents() {
       }
       
       setDocuments(documentsData);
+
+      // Try to fetch extraction data for conditional documents status
+      try {
+        const extraction = await apiService.getDonorExtractionData(Number(donorId));
+        setExtractionData(extraction);
+      } catch (err) {
+        // Extraction data is optional, so we don't show an error if it fails
+        console.log('Extraction data not available:', err);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
       let errorMessage = 'Failed to load data';
@@ -385,59 +397,6 @@ export default function Documents() {
         </div>
       </div>
 
-      {/* Document Mapping */}
-      <Card className="mb-6 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-blue-600" />
-            Document Mapping
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { type: 'Medical History', required: true, status: documents.some(d => d.document_type?.toLowerCase().includes('medical')) ? 'present' : 'missing' },
-            { type: 'Serology Report', required: true, status: documents.some(d => d.document_type?.toLowerCase().includes('serology')) ? 'present' : 'missing' },
-            { type: 'Laboratory Results', required: true, status: documents.some(d => d.document_type?.toLowerCase().includes('lab')) ? 'present' : 'missing' },
-            { type: 'Recovery Cultures', required: false, status: documents.some(d => d.document_type?.toLowerCase().includes('recovery') || d.document_type?.toLowerCase().includes('culture')) ? 'present' : 'missing' },
-            { type: 'Consent Form', required: true, status: documents.some(d => d.document_type?.toLowerCase().includes('consent')) ? 'present' : 'missing' },
-            { type: 'Death Certificate', required: true, status: documents.some(d => d.document_type?.toLowerCase().includes('death') || d.document_type?.toLowerCase().includes('certificate')) ? 'present' : 'missing' },
-          ].map((docType) => (
-            <div
-              key={docType.type}
-              className={`p-4 rounded-lg border-2 ${
-                docType.status === 'present'
-                  ? 'border-green-200 bg-green-50'
-                  : docType.required
-                  ? 'border-red-200 bg-red-50'
-                  : 'border-gray-200 bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-900">{docType.type}</span>
-                {docType.required && (
-                  <span className="text-xs text-red-600 font-medium">Required</span>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                {docType.status === 'present' ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-xs text-green-700">Present</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 text-red-600" />
-                    <span className="text-xs text-red-700">
-                      {docType.required ? 'Missing' : 'Not Provided'}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
       {/* Filters */}
       <Card className="mb-6 p-6">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -468,6 +427,12 @@ export default function Documents() {
           </div>
         </div>
       </Card>
+
+      {/* Document Checklist */}
+      <DocumentChecklist 
+        documents={documents} 
+        extractionData={extractionData || undefined}
+      />
 
       {/* Documents Table */}
       <Table
