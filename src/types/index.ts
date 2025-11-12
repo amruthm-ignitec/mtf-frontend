@@ -2,6 +2,7 @@
 export * from './donor';
 export * from './finding';
 export * from './extraction';
+export * from './donorApproval';
 
 export type FindingType = 'contraindication' | 'quality' | 'risk';
 export type FindingSeverity = 'critical' | 'moderate' | 'low' | 'good';

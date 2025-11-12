@@ -388,7 +388,7 @@ export default function Documents() {
               </Button>
             )}
             <Button
-              onClick={() => navigate('/upload')}
+              onClick={() => navigate(`/upload/${donorId}`)}
               icon={<Upload className="w-4 h-4" />}
             >
               Upload Document

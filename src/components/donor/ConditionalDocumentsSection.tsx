@@ -2,16 +2,17 @@ import React from 'react';
 import { ConditionalDocuments } from '../../types/extraction';
 import { FlaskConical, TestTube, FileSearch, AlertCircle } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface ConditionalDocumentsSectionProps {
   data: ConditionalDocuments;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
 export default function ConditionalDocumentsSection({
   data,
+  onCitationClick,
 }: ConditionalDocumentsSectionProps) {
   const { bioburden_results, toxicology_report, autopsy_report } = data;
 
@@ -78,15 +79,15 @@ export default function ConditionalDocumentsSection({
                 <p className="text-xs text-gray-600">CLIA: {bioburden_results.laboratory_information.clia}</p>
               </div>
             )}
-            <div className="flex items-center space-x-4">
-              <ConfidenceScore confidence={bioburden_results.confidence} />
-              <SourceDocumentLink
-                document={{
-                  source_document: bioburden_results.source_document,
-                  source_pages: bioburden_results.source_pages,
-                }}
-              />
-            </div>
+            {bioburden_results.source_document && bioburden_results.source_pages && bioburden_results.source_pages.length > 0 && (
+              <div className="mt-4">
+                <CitationBadge
+                  pageNumber={bioburden_results.source_pages[0]}
+                  documentName={bioburden_results.source_document}
+                  onClick={() => onCitationClick?.(bioburden_results.source_document, bioburden_results.source_pages?.[0])}
+                />
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -118,15 +119,15 @@ export default function ConditionalDocumentsSection({
                 {toxicology_report.toxicology_screening_status.performed ? 'Performed' : 'Not Performed'}
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <ConfidenceScore confidence={toxicology_report.toxicology_screening_status.confidence} />
-              <SourceDocumentLink
-                document={{
-                  source_document: toxicology_report.source_document,
-                  source_pages: toxicology_report.source_pages,
-                }}
-              />
-            </div>
+            {toxicology_report.source_document && toxicology_report.source_pages && toxicology_report.source_pages.length > 0 && (
+              <div className="mt-4">
+                <CitationBadge
+                  pageNumber={toxicology_report.source_pages[0]}
+                  documentName={toxicology_report.source_document}
+                  onClick={() => onCitationClick?.(toxicology_report.source_document, toxicology_report.source_pages?.[0])}
+                />
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -180,15 +181,15 @@ export default function ConditionalDocumentsSection({
                 ))}
               </div>
             )}
-            <div className="flex items-center space-x-4">
-              <ConfidenceScore confidence={autopsy_report.confidence} />
-              <SourceDocumentLink
-                document={{
-                  source_document: autopsy_report.source_document,
-                  source_pages: autopsy_report.source_pages,
-                }}
-              />
-            </div>
+            {autopsy_report.source_document && autopsy_report.source_pages && autopsy_report.source_pages.length > 0 && (
+              <div className="mt-4">
+                <CitationBadge
+                  pageNumber={autopsy_report.source_pages[0]}
+                  documentName={autopsy_report.source_document}
+                  onClick={() => onCitationClick?.(autopsy_report.source_document, autopsy_report.source_pages?.[0])}
+                />
+              </div>
+            )}
           </div>
         </Card>
       )}

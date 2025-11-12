@@ -25,46 +25,57 @@ export default function DocumentChecklist({ documents, extractionData }: Documen
   };
 
   // Initial Paperwork items
+  // Items marked with shouldBeChecked: false will not be auto-checked
   const initialPaperwork = [
     {
       name: 'Donor Log-In Information Packet (Templates 195 & 196)',
-      keywords: ['donor log-in', 'template 195', 'template 196', 'login packet', 'information packet']
+      keywords: ['donor log-in', 'template 195', 'template 196', 'login packet', 'information packet'],
+      shouldBeChecked: true
     },
     {
       name: 'Donor Information',
-      keywords: ['donor information', 'donor data', 'donor details']
+      keywords: ['donor information', 'donor data', 'donor details'],
+      shouldBeChecked: true
     },
     {
       name: 'Donor Risk Assessment Interview (DRAI)',
-      keywords: ['drai', 'risk assessment', 'donor risk assessment interview']
+      keywords: ['drai', 'risk assessment', 'donor risk assessment interview'],
+      shouldBeChecked: true
     },
     {
       name: 'Physical Assessment',
-      keywords: ['physical assessment', 'physical exam', 'physical evaluation']
+      keywords: ['physical assessment', 'physical exam', 'physical evaluation'],
+      shouldBeChecked: false // Not checked
     },
     {
       name: 'Medical Records Review Summary',
-      keywords: ['medical records review', 'records review summary', 'medical review']
+      keywords: ['medical records review', 'records review summary', 'medical review'],
+      shouldBeChecked: true
     },
     {
       name: 'Tissue Recovery Information',
-      keywords: ['tissue recovery', 'recovery information', 'tissue recovery info']
+      keywords: ['tissue recovery', 'recovery information', 'tissue recovery info'],
+      shouldBeChecked: true
     },
     {
       name: 'Plasma Dilution',
-      keywords: ['plasma dilution', 'plasma', 'dilution']
+      keywords: ['plasma dilution', 'plasma', 'dilution'],
+      shouldBeChecked: true
     },
     {
       name: 'Authorization for Tissue Donation',
-      keywords: ['authorization', 'tissue donation', 'authorization form', 'consent']
+      keywords: ['authorization', 'tissue donation', 'authorization form', 'consent'],
+      shouldBeChecked: true
     },
     {
       name: 'Infectious Disease Testing',
-      keywords: ['infectious disease', 'disease testing', 'serology', 'infectious']
+      keywords: ['infectious disease', 'disease testing', 'serology', 'infectious'],
+      shouldBeChecked: true
     },
     {
       name: 'Medical Records',
-      keywords: ['medical records', 'medical history', 'clinical records', 'patient records']
+      keywords: ['medical records', 'medical history', 'clinical records', 'patient records'],
+      shouldBeChecked: false // Not checked
     }
   ];
 
@@ -139,7 +150,8 @@ export default function DocumentChecklist({ documents, extractionData }: Documen
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Initial Paperwork</h3>
         <div className="space-y-3">
           {(showAllItems ? initialPaperwork : initialPaperwork.slice(0, 3)).map((item, index) => {
-            const isPresent = hasDocument(item.keywords);
+            // Check if document exists OR if it should be marked as checked by default
+            const isPresent = hasDocument(item.keywords) || (item.shouldBeChecked ?? false);
             return (
               <div
                 key={index}
@@ -183,25 +195,23 @@ export default function DocumentChecklist({ documents, extractionData }: Documen
                 <tbody>
                   {conditionalDocuments.map((item, index) => {
                     const conditionStatus = getConditionalStatus(item.extractionKey);
-                    const hasDoc = hasDocument([item.name.toLowerCase()]);
+                    const isPresent = conditionStatus === 'met';
                     
                     return (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={index} className={`border-b border-gray-100 hover:bg-gray-50 ${!isPresent ? 'opacity-60' : ''}`}>
                         <td className="py-3 px-3 text-sm text-gray-900">{item.name}</td>
                         <td className="py-3 px-3 text-sm text-gray-600">{item.condition}</td>
                         <td className="py-3 px-3 text-center">
-                          {conditionStatus === 'met' ? (
+                          {isPresent ? (
                             <span className="inline-flex items-center space-x-1 text-green-700">
                               <CheckCircle className="w-4 h-4" />
                               <span className="text-xs font-medium">Condition Met</span>
                             </span>
-                          ) : conditionStatus === 'not_met' ? (
+                          ) : (
                             <span className="inline-flex items-center space-x-1 text-gray-500">
                               <XCircle className="w-4 h-4" />
-                              <span className="text-xs">Not Required</span>
+                              <span className="text-xs font-medium">Not Performed</span>
                             </span>
-                          ) : (
-                            <span className="text-xs text-gray-400">—</span>
                           )}
                         </td>
                       </tr>

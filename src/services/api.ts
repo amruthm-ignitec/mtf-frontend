@@ -2,6 +2,7 @@
 import { LoginRequest, LoginResponse, User, UserCreate, UserUpdate, ApiError } from '../types/auth';
 import { DonorCreate, DonorUpdate, DonorResponse } from '../types/donor';
 import { ExtractionDataResponse } from '../types/extraction';
+import { DonorApprovalCreate, DonorApprovalResponse, PastDataResponse } from '../types/donorApproval';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -208,6 +209,26 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(settings),
     });
+  }
+
+  // Donor Approval/Rejection methods (Medical Director only)
+  async createDonorApproval(approval: DonorApprovalCreate): Promise<DonorApprovalResponse> {
+    return this.request<DonorApprovalResponse>('/donor-approvals/', {
+      method: 'POST',
+      body: JSON.stringify(approval),
+    });
+  }
+
+  async getDonorApprovals(donorId: number): Promise<DonorApprovalResponse[]> {
+    return this.request<DonorApprovalResponse[]>(`/donor-approvals/donor/${donorId}`);
+  }
+
+  async getDonorPastData(donorId: number): Promise<PastDataResponse> {
+    return this.request<PastDataResponse>(`/donor-approvals/donor/${donorId}/past-data`);
+  }
+
+  async getApproval(approvalId: number): Promise<DonorApprovalResponse> {
+    return this.request<DonorApprovalResponse>(`/donor-approvals/${approvalId}`);
   }
 }
 

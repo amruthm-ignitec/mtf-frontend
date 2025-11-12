@@ -2,15 +2,15 @@ import React from 'react';
 import { DRAI } from '../../types/extraction';
 import { MapPin, Calendar, Briefcase, Heart, AlertTriangle, Globe } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface DRAISectionProps {
   data: DRAI;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
-export default function DRAISection({ data }: DRAISectionProps) {
+export default function DRAISection({ data, onCitationClick }: DRAISectionProps) {
   const {
     interview_location,
     interview_datetime,
@@ -43,30 +43,30 @@ export default function DRAISection({ data }: DRAISectionProps) {
               <div>
                 <label className="text-sm font-medium text-gray-500">Location</label>
                 <p className="text-sm text-gray-900 mt-1">{interview_location.value}</p>
-                <div className="mt-2 flex items-center space-x-4">
-                  <ConfidenceScore confidence={interview_location.confidence} />
-                  <SourceDocumentLink
-                    document={{
-                      source_document: interview_location.source_document,
-                      source_pages: interview_location.source_pages,
-                    }}
-                  />
-                </div>
+                {interview_location.source_document && interview_location.source_pages && interview_location.source_pages.length > 0 && (
+                  <div className="mt-2">
+                    <CitationBadge
+                      pageNumber={interview_location.source_pages[0]}
+                      documentName={interview_location.source_document}
+                      onClick={() => onCitationClick?.(interview_location.source_document, interview_location.source_pages?.[0])}
+                    />
+                  </div>
+                )}
               </div>
             )}
             {interview_datetime && (
               <div>
                 <label className="text-sm font-medium text-gray-500">Date/Time</label>
                 <p className="text-sm text-gray-900 mt-1">{interview_datetime.value}</p>
-                <div className="mt-2 flex items-center space-x-4">
-                  <ConfidenceScore confidence={interview_datetime.confidence} />
-                  <SourceDocumentLink
-                    document={{
-                      source_document: interview_datetime.source_document,
-                      source_pages: interview_datetime.source_pages,
-                    }}
-                  />
-                </div>
+                {interview_datetime.source_document && interview_datetime.source_pages && interview_datetime.source_pages.length > 0 && (
+                  <div className="mt-2">
+                    <CitationBadge
+                      pageNumber={interview_datetime.source_pages[0]}
+                      documentName={interview_datetime.source_document}
+                      onClick={() => onCitationClick?.(interview_datetime.source_document, interview_datetime.source_pages?.[0])}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -88,15 +88,15 @@ export default function DRAISection({ data }: DRAISectionProps) {
                   <label className="text-sm font-medium text-gray-500">Occupation</label>
                 </div>
                 <p className="text-sm text-gray-900">{occupation.value}</p>
-                <div className="mt-2 flex items-center space-x-4">
-                  <ConfidenceScore confidence={occupation.confidence} />
-                  <SourceDocumentLink
-                    document={{
-                      source_document: occupation.source_document,
-                      source_pages: occupation.source_pages,
-                    }}
-                  />
-                </div>
+                {occupation.source_document && occupation.source_pages && occupation.source_pages.length > 0 && (
+                  <div className="mt-2">
+                    <CitationBadge
+                      pageNumber={occupation.source_pages[0]}
+                      documentName={occupation.source_document}
+                      onClick={() => onCitationClick?.(occupation.source_document, occupation.source_pages?.[0])}
+                    />
+                  </div>
+                )}
               </div>
             )}
             {place_of_birth && (
@@ -106,15 +106,15 @@ export default function DRAISection({ data }: DRAISectionProps) {
                   <label className="text-sm font-medium text-gray-500">Place of Birth</label>
                 </div>
                 <p className="text-sm text-gray-900">{place_of_birth.value}</p>
-                <div className="mt-2 flex items-center space-x-4">
-                  <ConfidenceScore confidence={place_of_birth.confidence} />
-                  <SourceDocumentLink
-                    document={{
-                      source_document: place_of_birth.source_document,
-                      source_pages: place_of_birth.source_pages,
-                    }}
-                  />
-                </div>
+                {place_of_birth.source_document && place_of_birth.source_pages && place_of_birth.source_pages.length > 0 && (
+                  <div className="mt-2">
+                    <CitationBadge
+                      pageNumber={place_of_birth.source_pages[0]}
+                      documentName={place_of_birth.source_document}
+                      onClick={() => onCitationClick?.(place_of_birth.source_document, place_of_birth.source_pages?.[0])}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -143,15 +143,15 @@ export default function DRAISection({ data }: DRAISectionProps) {
               </div>
             </div>
           )}
-          <div className="flex items-center space-x-4">
-            <ConfidenceScore confidence={medical_history.confidence} />
-            <SourceDocumentLink
-              document={{
-                source_document: medical_history.source_document,
-                source_pages: medical_history.source_pages,
-              }}
-            />
-          </div>
+          {medical_history.source_document && medical_history.source_pages && medical_history.source_pages.length > 0 && (
+            <div className="mt-4">
+              <CitationBadge
+                pageNumber={medical_history.source_pages[0]}
+                documentName={medical_history.source_document}
+                onClick={() => onCitationClick?.(medical_history.source_document, medical_history.source_pages?.[0])}
+              />
+            </div>
+          )}
         </Card>
       )}
 
@@ -181,15 +181,15 @@ export default function DRAISection({ data }: DRAISectionProps) {
               </div>
             )}
           </div>
-          <div className="mt-4 flex items-center space-x-4">
-            <ConfidenceScore confidence={risk_factors.confidence} />
-            <SourceDocumentLink
-              document={{
-                source_document: risk_factors.source_document,
-                source_pages: risk_factors.source_pages,
-              }}
-            />
-          </div>
+          {risk_factors.source_document && risk_factors.source_pages && risk_factors.source_pages.length > 0 && (
+            <div className="mt-4">
+              <CitationBadge
+                pageNumber={risk_factors.source_pages[0]}
+                documentName={risk_factors.source_document}
+                onClick={() => onCitationClick?.(risk_factors.source_document, risk_factors.source_pages?.[0])}
+              />
+            </div>
+          )}
         </Card>
       )}
     </div>

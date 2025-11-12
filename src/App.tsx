@@ -33,7 +33,7 @@ function App() {
                     <Route path="/documents/:donorId" element={<Documents />} />
                     <Route path="/queue" element={<Queue />} />
                     <Route path="/summary/:id" element={<Summary />} />
-                    <Route path="/upload" element={<DocUploaderRoute><Upload /></DocUploaderRoute>} />
+                    <Route path="/upload/:donorId?" element={<DocUploaderRoute><Upload /></DocUploaderRoute>} />
                     <Route path="/intelligence" element={<MedicalDirectorRoute><Intelligence /></MedicalDirectorRoute>} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/settings" element={<Settings />} />

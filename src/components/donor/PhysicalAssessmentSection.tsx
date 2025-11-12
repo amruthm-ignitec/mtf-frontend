@@ -2,16 +2,17 @@ import React from 'react';
 import { PhysicalAssessment } from '../../types/extraction';
 import { User, Ruler, Scale, Eye, AlertCircle, CheckCircle } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface PhysicalAssessmentSectionProps {
   data: PhysicalAssessment;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
 export default function PhysicalAssessmentSection({
   data,
+  onCitationClick,
 }: PhysicalAssessmentSectionProps) {
   const { exam_performed_by, anthropometric_measurements, physical_findings, status } = data;
 
@@ -50,15 +51,15 @@ export default function PhysicalAssessmentSection({
               <p className="text-sm text-gray-900 mt-1">{exam_performed_by.title}</p>
             </div>
           </div>
-          <div className="mt-4 flex items-center space-x-4">
-            <ConfidenceScore confidence={exam_performed_by.confidence} />
-            <SourceDocumentLink
-              document={{
-                source_document: exam_performed_by.source_document,
-                source_page: exam_performed_by.source_page,
-              }}
-            />
-          </div>
+          {exam_performed_by.source_document && exam_performed_by.source_page && (
+            <div className="mt-4">
+              <CitationBadge
+                pageNumber={exam_performed_by.source_page}
+                documentName={exam_performed_by.source_document}
+                onClick={() => onCitationClick?.(exam_performed_by.source_document, exam_performed_by.source_page)}
+              />
+            </div>
+          )}
         </Card>
       )}
 
@@ -80,10 +81,15 @@ export default function PhysicalAssessmentSection({
                   {anthropometric_measurements.height.value.trim()}{' '}
                   {anthropometric_measurements.height.unit}
                 </p>
-                <ConfidenceScore
-                  confidence={anthropometric_measurements.height.confidence}
-                  className="mt-2"
-                />
+                {anthropometric_measurements.height.source_document && anthropometric_measurements.height.source_page && (
+                  <div className="mt-2">
+                    <CitationBadge
+                      pageNumber={anthropometric_measurements.height.source_page}
+                      documentName={anthropometric_measurements.height.source_document}
+                      onClick={() => onCitationClick?.(anthropometric_measurements.height.source_document, anthropometric_measurements.height.source_page)}
+                    />
+                  </div>
+                )}
               </div>
             )}
             {anthropometric_measurements.weight && (
@@ -96,10 +102,15 @@ export default function PhysicalAssessmentSection({
                   {anthropometric_measurements.weight.value.trim()}{' '}
                   {anthropometric_measurements.weight.unit}
                 </p>
-                <ConfidenceScore
-                  confidence={anthropometric_measurements.weight.confidence}
-                  className="mt-2"
-                />
+                {anthropometric_measurements.weight.source_document && anthropometric_measurements.weight.source_page && (
+                  <div className="mt-2">
+                    <CitationBadge
+                      pageNumber={anthropometric_measurements.weight.source_page}
+                      documentName={anthropometric_measurements.weight.source_document}
+                      onClick={() => onCitationClick?.(anthropometric_measurements.weight.source_document, anthropometric_measurements.weight.source_page)}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -198,33 +209,17 @@ export default function PhysicalAssessmentSection({
           )}
 
           {/* Source Document */}
-          {physical_findings.source_document && (
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <span className="font-medium">Source:</span>
-              <SourceDocumentLink
-                document={{
-                  source_document: physical_findings.source_document,
-                  source_page: physical_findings.source_page,
-                }}
+          {physical_findings.source_document && physical_findings.source_page && (
+            <div className="mt-4">
+              <CitationBadge
+                pageNumber={physical_findings.source_page}
+                documentName={physical_findings.source_document}
+                onClick={() => onCitationClick?.(physical_findings.source_document, physical_findings.source_page)}
               />
-              {physical_findings.confidence && (
-                <ConfidenceScore confidence={physical_findings.confidence} />
-              )}
             </div>
           )}
         </>
       )}
-
-      {/* Overall Source Document */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
-        <span className="font-medium">Document Reference:</span>
-        <SourceDocumentLink
-          document={{
-            source_document: data.source_document,
-            source_pages: data.source_pages,
-          }}
-        />
-      </div>
     </div>
   );
 }

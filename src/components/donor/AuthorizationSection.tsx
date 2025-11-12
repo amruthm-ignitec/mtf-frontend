@@ -2,15 +2,15 @@ import React from 'react';
 import { Authorization } from '../../types/extraction';
 import { FileText, User, Calendar, CheckCircle } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface AuthorizationSectionProps {
   data: Authorization;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
-export default function AuthorizationSection({ data }: AuthorizationSectionProps) {
+export default function AuthorizationSection({ data, onCitationClick }: AuthorizationSectionProps) {
   const { form_type, form_use, authorized_party, authorization_datetime, status } = data;
 
   return (
@@ -56,15 +56,15 @@ export default function AuthorizationSection({ data }: AuthorizationSectionProps
               <p className="text-sm text-gray-900 mt-1">{authorized_party.relationship}</p>
             </div>
           </div>
-          <div className="mt-4 flex items-center space-x-4">
-            <ConfidenceScore confidence={authorized_party.confidence} />
-            <SourceDocumentLink
-              document={{
-                source_document: authorized_party.source_document,
-                source_page: authorized_party.source_page,
-              }}
-            />
-          </div>
+          {authorized_party.source_document && authorized_party.source_page && (
+            <div className="mt-4">
+              <CitationBadge
+                pageNumber={authorized_party.source_page}
+                documentName={authorized_party.source_document}
+                onClick={() => onCitationClick?.(authorized_party.source_document, authorized_party.source_page)}
+              />
+            </div>
+          )}
         </Card>
       )}
 
@@ -97,33 +97,17 @@ export default function AuthorizationSection({ data }: AuthorizationSectionProps
               </p>
             </div>
           </div>
-          <div className="mt-4 flex items-center space-x-4">
-            <ConfidenceScore confidence={authorization_datetime.confidence} />
-            <SourceDocumentLink
-              document={{
-                source_document: authorization_datetime.source_document,
-              }}
-            />
-          </div>
+          {authorization_datetime.source_document && (
+            <div className="mt-4">
+              <CitationBadge
+                pageNumber={1}
+                documentName={authorization_datetime.source_document}
+                onClick={() => onCitationClick?.(authorization_datetime.source_document, 1)}
+              />
+            </div>
+          )}
         </Card>
       )}
-
-      {/* Source Documents */}
-      <Card className="p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <CheckCircle className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Source Documents</h3>
-        </div>
-        <div className="space-y-2">
-          <SourceDocumentLink
-            document={{
-              source_document: data.source_document,
-              source_pages: data.source_pages,
-            }}
-          />
-          {data.confidence && <ConfidenceScore confidence={data.confidence} />}
-        </div>
-      </Card>
     </div>
   );
 }

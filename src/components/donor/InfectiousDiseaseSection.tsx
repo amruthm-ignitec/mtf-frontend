@@ -2,16 +2,16 @@ import React from 'react';
 import { InfectiousDiseaseTesting } from '../../types/extraction';
 import { FlaskConical, Building2, FileText, CheckCircle, XCircle } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 import Table from '../ui/Table';
 
 interface InfectiousDiseaseSectionProps {
   data: InfectiousDiseaseTesting;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
-export default function InfectiousDiseaseSection({ data }: InfectiousDiseaseSectionProps) {
+export default function InfectiousDiseaseSection({ data, onCitationClick }: InfectiousDiseaseSectionProps) {
   const { serology_report, other_tests, status } = data;
 
   const getTestResultColor = (result?: string) => {
@@ -45,14 +45,15 @@ export default function InfectiousDiseaseSection({ data }: InfectiousDiseaseSect
           </div>
           <div className="bg-blue-50 p-4 rounded-lg">
             <p className="text-sm font-medium text-blue-900">{serology_report.report_type}</p>
-            <div className="mt-2 flex items-center space-x-4">
-              <ConfidenceScore confidence={serology_report.confidence} />
-              <SourceDocumentLink
-                document={{
-                  source_document: serology_report.source_document,
-                }}
-              />
-            </div>
+            {serology_report.source_document && (
+              <div className="mt-2">
+                <CitationBadge
+                  pageNumber={1}
+                  documentName={serology_report.source_document}
+                  onClick={() => onCitationClick?.(serology_report.source_document, 1)}
+                />
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -184,7 +185,7 @@ export default function InfectiousDiseaseSection({ data }: InfectiousDiseaseSect
                     Result
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Confidence
+                    Citation
                   </th>
                 </tr>
               </thead>
@@ -204,7 +205,13 @@ export default function InfectiousDiseaseSection({ data }: InfectiousDiseaseSect
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <ConfidenceScore confidence={field.confidence} showLabel={false} />
+                      {field.source_document && field.source_page && (
+                        <CitationBadge
+                          pageNumber={field.source_page}
+                          documentName={field.source_document}
+                          onClick={() => onCitationClick?.(field.source_document, field.source_page)}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -236,17 +243,6 @@ export default function InfectiousDiseaseSection({ data }: InfectiousDiseaseSect
           </div>
         </Card>
       )}
-
-      {/* Source Documents */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
-        <span className="font-medium">Source:</span>
-        <SourceDocumentLink
-          document={{
-            source_document: data.source_document,
-            source_pages: data.source_pages,
-          }}
-        />
-      </div>
     </div>
   );
 }

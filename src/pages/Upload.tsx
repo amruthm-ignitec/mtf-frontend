@@ -1,19 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useParams, useLocation } from 'react-router-dom';
 import { 
   Upload as UploadIcon, 
   File, 
   X, 
   CheckCircle, 
   AlertCircle,
-  Link as LinkIcon,
-  Database,
   Loader2,
-  Users
+  FileText,
+  Image as ImageIcon
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { Donor } from '../types/donor';
 import DocumentStatusSlider, { DocumentStatus } from '../components/ui/DocumentStatusSlider';
+import Toast from '../components/ui/Toast';
 
 interface UploadedFile {
   id: string;
@@ -26,53 +27,57 @@ interface UploadedFile {
   documentStatus?: DocumentStatus;
 }
 
-const DOCUMENT_TYPES = [
-  'Medical History',
-  'Serology Report',
-  'Laboratory Results',
-  'Recovery Cultures',
-  'Consent Form',
-  'Death Certificate'
-];
-
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB in bytes
 
 export default function Upload() {
+  const { donorId: donorIdParam } = useParams<{ donorId?: string }>();
+  const location = useLocation();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [donors, setDonors] = useState<Donor[]>([]);
-  const [selectedDonorId, setSelectedDonorId] = useState<number | null>(null);
-  const [loadingDonors, setLoadingDonors] = useState(true);
+  const [donor, setDonor] = useState<Donor | null>(null);
+  const [loadingDonor, setLoadingDonor] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
-  // Fetch donors on component mount
+  // Get donorId from URL params or location state
+  const donorId = donorIdParam || (location.state as any)?.donorId;
+
+  // Fetch donor details if donorId is provided
   useEffect(() => {
-    const fetchDonors = async () => {
+    const fetchDonor = async () => {
+      if (!donorId) {
+        setError('No donor ID provided. Please navigate from the donor documents page.');
+        setLoadingDonor(false);
+        return;
+      }
+
       try {
-        setLoadingDonors(true);
+        setLoadingDonor(true);
         const donorsData = await apiService.getDonors();
-        setDonors(donorsData);
+        const selectedDonor = donorsData.find(d => d.id === parseInt(donorId));
+        
+        if (!selectedDonor) {
+          setError(`Donor with ID ${donorId} not found.`);
+          setLoadingDonor(false);
+          return;
+        }
+        
+        setDonor(selectedDonor);
       } catch (err) {
-        console.error('Failed to fetch donors:', err);
-        setError('Failed to load donors. Please refresh the page.');
+        console.error('Failed to fetch donor:', err);
+        setError('Failed to load donor information. Please refresh the page.');
       } finally {
-        setLoadingDonors(false);
+        setLoadingDonor(false);
       }
     };
 
-    fetchDonors();
-  }, []);
-
-  // Clear error when donor is selected
-  useEffect(() => {
-    if (selectedDonorId && error === 'Please select a donor before uploading files.') {
-      setError(null);
-    }
-  }, [selectedDonorId, error]);
+    fetchDonor();
+  }, [donorId]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!selectedDonorId) {
-      setError('Please select a donor before uploading files.');
+    if (!donorId) {
+      setError('No donor ID provided. Please navigate from the donor documents page.');
       return;
     }
 
@@ -106,6 +111,7 @@ export default function Upload() {
     setError(null);
 
     // Upload each file
+    let successCount = 0;
     await Promise.all(newFiles.map(async (fileObj) => {
       const formData = new FormData();
       formData.append('file', fileObj.file);
@@ -113,7 +119,7 @@ export default function Upload() {
 
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/documents/upload?donor_id=${selectedDonorId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/documents/upload?donor_id=${donorId}`, {
           method: 'POST',
           headers: {
             ...(token && { Authorization: `Bearer ${token}` }),
@@ -141,6 +147,8 @@ export default function Upload() {
               : f
           )
         );
+        
+        successCount++;
       } catch (error) {
         console.error('Upload error:', error);
         setError('Failed to upload one or more files. Please try again.');
@@ -154,49 +162,28 @@ export default function Upload() {
       }
     }));
 
-    setIsUploading(false);
-  }, [selectedDonorId]);
+    // Show toast notification after all uploads complete
+    if (successCount > 0) {
+      setToastMessage(`Documents uploaded successfully. They are currently being processed and will be in queue. Please check back later for status.`);
+      setShowToast(true);
+    }
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    setIsUploading(false);
+  }, [donorId]);
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({ 
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png']
     },
     maxSize: MAX_FILE_SIZE,
-    disabled: isUploading || !selectedDonorId
+    disabled: isUploading || !donorId
   });
 
-  const handleTypeChange = async (fileId: string, newType: string) => {
-    const fileObj = uploadedFiles.find(f => f.id === fileId);
-    if (!fileObj?.stored_document_id) return;
-
-    try {
-      setError(null);
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/documents/${fileObj.stored_document_id}/type`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ documentType: newType }),
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to update document type');
-
-      setUploadedFiles(prev =>
-        prev.map(f =>
-          f.id === fileId
-            ? { ...f, documentType: newType }
-            : f
-        )
-      );
-    } catch (error) {
-      console.error('Error updating document type:', error);
-      setError('Failed to update document type. Please try again.');
-    }
-  };
 
   const handleRemoveFile = async (fileId: string) => {
     const fileObj = uploadedFiles.find(f => f.id === fileId);
@@ -236,46 +223,19 @@ export default function Upload() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-gray-900">Upload Documents</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Upload medical records and documents for AI-powered analysis
-        </p>
-      </div>
-
-      {/* Donor Selection */}
-      <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-base font-medium text-gray-900 mb-4 flex items-center">
-          <Users className="w-5 h-5 mr-2 text-blue-600" />
-          Select Donor
-        </h2>
-        {loadingDonors ? (
-          <div className="flex items-center">
+        {loadingDonor ? (
+          <div className="flex items-center mt-2">
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            <span className="text-sm text-gray-500">Loading donors...</span>
+            <span className="text-sm text-gray-500">Loading donor information...</span>
           </div>
+        ) : donor ? (
+          <p className="mt-2 text-sm text-gray-500">
+            Uploading documents for <span className="font-medium">{donor.name}</span> (ID: {donor.unique_donor_id})
+          </p>
         ) : (
-          <div className="max-w-md">
-            <select
-              value={selectedDonorId || ''}
-              onChange={(e) => {
-                setSelectedDonorId(Number(e.target.value) || null);
-                setError(null); // Clear any existing error when donor is selected
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              disabled={isUploading}
-            >
-              <option value="">Select a donor...</option>
-              {donors.map((donor) => (
-                <option key={donor.id} value={donor.id}>
-                  {donor.name} (ID: {donor.unique_donor_id})
-                </option>
-              ))}
-            </select>
-            {selectedDonorId && (
-              <p className="mt-2 text-sm text-green-600">
-                ✓ Selected donor: {donors.find(d => d.id === selectedDonorId)?.name}
-              </p>
-            )}
-          </div>
+          <p className="mt-2 text-sm text-gray-500">
+            Upload medical records and documents for AI-powered analysis
+          </p>
         )}
       </div>
 
@@ -289,51 +249,92 @@ export default function Upload() {
         </div>
       )}
 
-      {/* Upload Source Selection */}
-      <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-base font-medium text-gray-900 mb-4">Select Upload Source</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button 
-            className="p-4 rounded-lg border-2 border-blue-500 bg-blue-50 flex flex-col items-center transition-colors duration-150 hover:bg-blue-100"
-            disabled={isUploading}
-          >
-            <UploadIcon className="w-6 h-6 mb-2 text-blue-600" />
-            <span className="font-medium text-sm text-gray-900">File Upload</span>
-            <span className="text-xs text-gray-500 mt-1">Upload PDF files directly</span>
-          </button>
-
-          <button disabled className="p-4 rounded-lg border-2 border-gray-200 flex flex-col items-center transition-colors duration-150 opacity-50 cursor-not-allowed">
-            <LinkIcon className="w-6 h-6 mb-2 text-gray-400" />
-            <span className="font-medium text-sm text-gray-900">API Integration</span>
-            <span className="text-xs text-gray-500 mt-1">Coming soon</span>
-          </button>
-
-          <button disabled className="p-4 rounded-lg border-2 border-gray-200 flex flex-col items-center transition-colors duration-150 opacity-50 cursor-not-allowed">
-            <Database className="w-6 h-6 mb-2 text-gray-400" />
-            <span className="font-medium text-sm text-gray-900">Custom Connection</span>
-            <span className="text-xs text-gray-500 mt-1">Coming soon</span>
-          </button>
-        </div>
-      </div>
-
       {/* Upload Area */}
       <div className="space-y-6">
         <div 
           {...getRootProps()} 
-          className={`border-2 border-dashed rounded-lg p-8 transition-colors duration-150 cursor-pointer
-            ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}
-            ${isUploading || !selectedDonorId ? 'cursor-not-allowed opacity-50' : ''}
+          className={`border-2 border-dashed rounded-lg p-12 transition-colors duration-150 cursor-pointer bg-white
+            ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            ${isUploading || !donorId ? 'cursor-not-allowed opacity-50' : ''}
           `}
         >
-          <input {...getInputProps()} disabled={isUploading} />
+          <input {...getInputProps()} disabled={isUploading || !donorId} />
           <div className="text-center">
-            <UploadIcon className="mx-auto h-10 w-10 text-gray-400" />
-            <p className="mt-2 text-sm font-medium text-gray-900">
-              {!selectedDonorId ? 'Please select a donor first' : isDragActive ? 'Drop the files here' : 'Drag and drop PDF files here'}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                <UploadIcon className="h-8 w-8 text-gray-400" />
+              </div>
+            </div>
+            <p className="text-base font-semibold text-gray-900 mb-1">
+              {!donorId ? 'Please navigate from a donor page' : isDragActive ? 'Drop the files here' : 'Drag and drop files here'}
             </p>
-            <p className="mt-1 text-xs text-gray-500">
-              {!selectedDonorId ? 'Select a donor above to enable file upload' : 'or click to select files from your computer (max 500MB per file)'}
+            <p className="text-sm text-gray-500 mb-6">
+              {!donorId ? 'Select a donor to enable file upload' : 'or click to select files from your computer'}
             </p>
+            
+            {/* File Type Buttons */}
+            <div className="flex justify-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isUploading && donorId) open();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || !donorId}
+              >
+                <FileText className="w-4 h-4" />
+                PDF
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isUploading && donorId) open();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || !donorId}
+              >
+                <FileText className="w-4 h-4" />
+                DOC
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isUploading && donorId) open();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || !donorId}
+              >
+                <FileText className="w-4 h-4" />
+                DOCX
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isUploading && donorId) open();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || !donorId}
+              >
+                <ImageIcon className="w-4 h-4" />
+                JPG
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isUploading && donorId) open();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || !donorId}
+              >
+                <ImageIcon className="w-4 h-4" />
+                PNG
+              </button>
+            </div>
           </div>
         </div>
 
@@ -357,17 +358,6 @@ export default function Upload() {
                       </div>
 
                       <div className="flex items-center space-x-4">
-                        <select 
-                          className="text-sm border-gray-300 rounded-md pr-8 py-1.5 focus:ring-blue-500 focus:border-blue-500"
-                          value={fileObj.documentType}
-                          onChange={(e) => handleTypeChange(fileObj.id, e.target.value)}
-                          disabled={fileObj.status === 'uploading'}
-                        >
-                          {DOCUMENT_TYPES.map(type => (
-                            <option key={type} value={type}>{type}</option>
-                          ))}
-                        </select>
-
                         {fileObj.status === 'uploading' && (
                           <div className="flex items-center space-x-2">
                             <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
@@ -408,6 +398,16 @@ export default function Upload() {
           </div>
         )}
       </div>
+      
+      {/* Toast Notification */}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          type="info"
+          duration={6000}
+          onClose={() => setShowToast(false)}
+        />
+      )}
     </div>
   );
 }

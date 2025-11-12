@@ -2,16 +2,17 @@ import React from 'react';
 import { MedicalRecordsReview } from '../../types/extraction';
 import { FileText, User, ClipboardList } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface MedicalRecordsReviewSectionProps {
   data: MedicalRecordsReview;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
 export default function MedicalRecordsReviewSection({
   data,
+  onCitationClick,
 }: MedicalRecordsReviewSectionProps) {
   const { status, confidence } = data;
 
@@ -33,20 +34,6 @@ export default function MedicalRecordsReviewSection({
           <p className="text-sm text-gray-700">
             Medical records have been reviewed and validated for this donor case.
           </p>
-        </div>
-      </Card>
-
-      {/* Source Document */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Source Information</h3>
-        <div className="space-y-2">
-          <SourceDocumentLink
-            document={{
-              source_document: data.source_document,
-              source_pages: data.source_pages,
-            }}
-          />
-          {confidence && <ConfidenceScore confidence={confidence} />}
         </div>
       </Card>
     </div>

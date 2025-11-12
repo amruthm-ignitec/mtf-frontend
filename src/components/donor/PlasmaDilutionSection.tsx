@@ -2,15 +2,15 @@ import React from 'react';
 import { PlasmaDilution } from '../../types/extraction';
 import { Droplets, Scale, Calculator } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface PlasmaDilutionSectionProps {
   data: PlasmaDilution;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
-export default function PlasmaDilutionSection({ data }: PlasmaDilutionSectionProps) {
+export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaDilutionSectionProps) {
   const { transfusion_status, status, confidence } = data;
 
   // Calculate TPV and TBV based on weight
@@ -60,14 +60,15 @@ export default function PlasmaDilutionSection({ data }: PlasmaDilutionSectionPro
             </p>
           </div>
         </div>
-        <div className="mt-4 flex items-center space-x-4">
-          <ConfidenceScore confidence={transfusion_status.confidence} />
-          <SourceDocumentLink
-            document={{
-              source_document: transfusion_status.source_document,
-            }}
-          />
-        </div>
+        {transfusion_status.source_document && (
+          <div className="mt-4">
+            <CitationBadge
+              pageNumber={1}
+              documentName={transfusion_status.source_document}
+              onClick={() => onCitationClick?.(transfusion_status.source_document, 1)}
+            />
+          </div>
+        )}
       </Card>
 
       {/* Volume Calculations */}
@@ -99,18 +100,6 @@ export default function PlasmaDilutionSection({ data }: PlasmaDilutionSectionPro
           </div>
         </Card>
       )}
-
-      {/* Source Document */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
-        <span className="font-medium">Source:</span>
-        <SourceDocumentLink
-          document={{
-            source_document: data.source_document,
-            source_pages: data.source_pages,
-          }}
-        />
-        {confidence && <ConfidenceScore confidence={confidence} />}
-      </div>
     </div>
   );
 }

@@ -2,15 +2,15 @@ import React from 'react';
 import { TissueRecovery } from '../../types/extraction';
 import { Package, MapPin } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import ConfidenceScore from '../ui/ConfidenceScore';
-import SourceDocumentLink from '../ui/SourceDocumentLink';
+import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface TissueRecoverySectionProps {
   data: TissueRecovery;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
-export default function TissueRecoverySection({ data }: TissueRecoverySectionProps) {
+export default function TissueRecoverySection({ data, onCitationClick }: TissueRecoverySectionProps) {
   const { total_tissues_recovered, recovery_site, status, confidence } = data;
 
   return (
@@ -38,20 +38,6 @@ export default function TissueRecoverySection({ data }: TissueRecoverySectionPro
             </div>
             <p className="text-lg font-semibold text-green-900">{recovery_site}</p>
           </div>
-        </div>
-      </Card>
-
-      {/* Source Document */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Source Information</h3>
-        <div className="space-y-2">
-          <SourceDocumentLink
-            document={{
-              source_document: data.source_document,
-              source_pages: data.source_pages,
-            }}
-          />
-          {confidence && <ConfidenceScore confidence={confidence} />}
         </div>
       </Card>
     </div>

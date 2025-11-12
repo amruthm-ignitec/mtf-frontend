@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FindingSummary, DonorRecord, MDSummarySection, ExtractionDataResponse } from '../types';
+import { ApprovalStatus, ApprovalType, PastDataResponse } from '../types/donorApproval';
 // import { getMockMDSections } from '../services/mockData';
 // ClinicalInformation and FindingsSection components moved inline
-import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight, UserCheck, FlaskConical, Package, Shield, FileSearch, Droplets } from 'lucide-react';
+import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight, UserCheck, FlaskConical, Package, Shield, FileSearch, Droplets, XCircle, History, ArrowLeft } from 'lucide-react';
 import FindingDetailsModal from '../components/modals/FindingDetailsModal';
+import ApprovalRejectionModal from '../components/modals/ApprovalRejectionModal';
 import { mockTissueAnalysis } from '../mocks/tissue-analysis-data';
-import SummaryChat from '../components/chat/SummaryChat';
 import { apiService } from '../services/api';
 import PhysicalAssessmentSection from '../components/donor/PhysicalAssessmentSection';
 import AuthorizationSection from '../components/donor/AuthorizationSection';
@@ -17,6 +18,10 @@ import ComplianceSection from '../components/donor/ComplianceSection';
 import ConditionalDocumentsSection from '../components/donor/ConditionalDocumentsSection';
 import MedicalRecordsReviewSection from '../components/donor/MedicalRecordsReviewSection';
 import PlasmaDilutionSection from '../components/donor/PlasmaDilutionSection';
+import PastDataSection from '../components/donor/PastDataSection';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import PDFViewer from '../components/ui/PDFViewer';
 
 // Inline components
 const ClinicalInformation = ({ donor }: { donor: DonorRecord }) => (
@@ -78,9 +83,66 @@ export default function Summary() {
   const [mdSections, setMDSections] = useState<MDSummarySection[]>([]);
   const [selectedFinding, setSelectedFinding] = useState<FindingSummary | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  
+  // Handle tab change - clear PDF viewer
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId);
+    // Clear PDF viewer when switching tabs
+    setSelectedPdfUrl(null);
+    setSelectedPageNumber(null);
+    setSelectedDocumentName(null);
+  };
   const [selectedMDCitation, setSelectedMDCitation] = useState<number | null>(null);
   const [extractionData, setExtractionData] = useState<ExtractionDataResponse | null>(null);
   const [loadingExtraction, setLoadingExtraction] = useState(false);
+  
+  // Approval/Rejection state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalType, setApprovalType] = useState<ApprovalType>('donor_summary');
+  const [pastData, setPastData] = useState<PastDataResponse | null>(null);
+  const [loadingPastData, setLoadingPastData] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  
+  // Critical findings and missing documents
+  const [criticalFindings, setCriticalFindings] = useState<Array<{
+    type: string;
+    severity: string;
+    automaticRejection: boolean;
+    detectedAt?: string;
+    source: {
+      documentId: string;
+      pageNumber: string;
+      confidence: number;
+    };
+  }>>([]);
+  const [missingDocuments, setMissingDocuments] = useState<Array<{
+    id: string;
+    name: string;
+    type: string;
+    label: string;
+    status: 'completed' | 'processing' | 'missing' | 'invalid';
+    isRequired: boolean;
+    uploadDate?: string;
+    reviewedBy?: string;
+    reviewDate?: string;
+    pageCount: number;
+  }>>([]);
+  
+  // Documents for checklist and PDF viewer
+  const [documents, setDocuments] = useState<Array<{
+    id: number;
+    document_type: string;
+    created_at: string;
+    updated_at?: string;
+    azure_blob_url?: string;
+    filename?: string;
+    original_filename?: string;
+  }>>([]);
+  
+  // PDF Viewer state
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
+  const [selectedPageNumber, setSelectedPageNumber] = useState<number | null>(null);
+  const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
 
   // useEffect(() => {
   //   console.log('Current ID:', id);
@@ -167,6 +229,34 @@ export default function Summary() {
         // But for now, we'll just use the test.json data
         console.log('Using test.json data - no backend fetch needed');
         
+        // Load user role
+        const role = apiService.getUserRole();
+        setUserRole(role);
+        
+        // Fetch documents for checklist
+        try {
+          const documentsData = await apiService.getDonorDocuments(Number(id));
+          setDocuments(documentsData as any);
+        } catch (err) {
+          console.error('Error fetching documents:', err);
+          setDocuments([]);
+        }
+        
+        // Fetch donor details with critical findings and missing documents
+        try {
+          const donorDetails = await apiService.getQueueDetails();
+          const currentDonorDetails = donorDetails.find((d: any) => d.id === Number(id));
+          if (currentDonorDetails) {
+            setCriticalFindings(currentDonorDetails.criticalFindings || []);
+            setMissingDocuments(currentDonorDetails.requiredDocuments?.filter((doc: any) => doc.status === 'missing') || []);
+          }
+        } catch (err) {
+          console.error('Error fetching donor details:', err);
+          // Use dummy data if API fails
+          setCriticalFindings([]);
+          setMissingDocuments([]);
+        }
+        
       } catch (err) {
         console.error('Error loading test data:', err);
         // Fallback to mock data if test.json fails to load
@@ -190,6 +280,64 @@ export default function Summary() {
       loadData();
     }
   }, [id, navigate, location.state]);
+
+  // Load past data
+  const loadPastData = async () => {
+    if (!id) return;
+    
+    try {
+      setLoadingPastData(true);
+      const data = await apiService.getDonorPastData(Number(id));
+      setPastData(data);
+    } catch (err) {
+      console.error('Error loading past data:', err);
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingPastData(false);
+    }
+  };
+
+  // Load past data when user role is available
+  useEffect(() => {
+    if (userRole && (userRole === 'medical_director' || userRole === 'admin') && id) {
+      loadPastData();
+    }
+  }, [userRole, id]);
+
+  // Handle approval/rejection
+  const handleApprovalRejection = async (status: ApprovalStatus, comment: string) => {
+    if (!id || !donor) return;
+    
+    // Get current checklist data from extraction data
+    const checklistData = extractionData ? {
+      initial_paperwork: extractionData.extracted_data ? {
+        donor_login_packet: extractionData.extracted_data.donor_login_packet?.status || 'PENDING',
+        donor_information: extractionData.extracted_data.donor_information?.status || 'PENDING',
+        drai: extractionData.extracted_data.drai?.status || 'PENDING',
+        physical_assessment: extractionData.extracted_data.physical_assessment?.status || 'PENDING',
+        medical_records_review: extractionData.extracted_data.medical_records_review?.status || 'PENDING',
+        tissue_recovery: extractionData.extracted_data.tissue_recovery?.status || 'PENDING',
+        plasma_dilution: extractionData.extracted_data.plasma_dilution?.status || 'PENDING',
+        authorization: extractionData.extracted_data.authorization?.status || 'PENDING',
+        infectious_disease_testing: extractionData.extracted_data.infectious_disease_testing?.status || 'PENDING',
+        medical_records: extractionData.extracted_data.medical_records?.status || 'PENDING',
+      } : {},
+      conditional_documents: extractionData?.conditional_documents || {},
+      compliance_status: extractionData?.compliance_status || null,
+    } : null;
+    
+    await apiService.createDonorApproval({
+      donor_id: Number(id),
+      document_id: null, // For donor summary approval
+      approval_type: approvalType,
+      status,
+      comment,
+      checklist_data: checklistData,
+    });
+    
+    // Reload past data after approval/rejection
+    await loadPastData();
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -233,12 +381,12 @@ export default function Summary() {
                         <div className="text-xs text-gray-500">Recovery Window</div>
                         <div className="text-sm font-medium">24 hours</div>
                       </div>
-                      <div className="bg-gray-50 p-2 rounded">
-                        <div className="text-xs text-gray-500">Location</div>
-                        <div className="text-sm font-medium">Memorial Hospital</div>
+                      <div className="bg-green-50 p-2 rounded border border-green-200">
+                        <div className="text-xs text-green-800">Location</div>
+                        <div className="text-sm font-medium text-green-900">Memorial Hospital</div>
                       </div>
                     </div>
-                    <div className="bg-green-50 p-2 rounded">
+                    <div className="bg-green-50 p-2 rounded border border-green-200">
                       <div className="text-xs text-green-800">Consent Status</div>
                       <div className="text-sm font-medium text-green-900">Authorized by Next of Kin (Spouse)</div>
                     </div>
@@ -252,18 +400,18 @@ export default function Summary() {
                     Terminal Information
                   </h3>
                   <div className="space-y-3">
-                    <div className="bg-purple-50 p-2 rounded">
+                    <div className="bg-purple-50 p-2 rounded border border-purple-200">
                       <div className="text-xs text-purple-800">Cause of Death</div>
-                      <div className="text-sm font-medium">{donor.causeOfDeath}</div>
+                      <div className="text-sm font-medium text-purple-900">{donor.causeOfDeath || 'Anoxic Brain Injury'}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-50 p-2 rounded">
-                        <div className="text-xs text-gray-500">Hypotension</div>
-                        <div className="text-sm font-medium text-green-600">None</div>
+                      <div className="bg-green-50 p-2 rounded border border-green-200">
+                        <div className="text-xs text-green-800">Hypotension</div>
+                        <div className="text-sm font-medium text-green-900">None</div>
                       </div>
-                      <div className="bg-gray-50 p-2 rounded">
-                        <div className="text-xs text-gray-500">Sepsis</div>
-                        <div className="text-sm font-medium text-green-600">None</div>
+                      <div className="bg-green-50 p-2 rounded border border-green-200">
+                        <div className="text-xs text-green-800">Sepsis</div>
+                        <div className="text-sm font-medium text-green-900">None</div>
                       </div>
                     </div>
                   </div>
@@ -271,23 +419,310 @@ export default function Summary() {
               </div>
             )}
 
-            {/* Document Status */}
-            {donor && (
+            {/* Required Documentation */}
+            {donor && (() => {
+              // Initial Paperwork items - same as DocumentChecklist
+              const initialPaperwork = [
+                {
+                  name: 'Donor Log-In Information Packet (Templates 195 & 196)',
+                  keywords: ['donor log-in', 'template 195', 'template 196', 'login packet', 'information packet'],
+                  shouldBeChecked: true,
+                  displayName: 'Donor Log-In Information Packet'
+                },
+                {
+                  name: 'Donor Information',
+                  keywords: ['donor information', 'donor data', 'donor details'],
+                  shouldBeChecked: true,
+                  displayName: 'Donor Information'
+                },
+                {
+                  name: 'Donor Risk Assessment Interview (DRAI)',
+                  keywords: ['drai', 'risk assessment', 'donor risk assessment interview'],
+                  shouldBeChecked: true,
+                  displayName: 'Donor Risk Assessment Interview (DRAI)'
+                },
+                {
+                  name: 'Physical Assessment',
+                  keywords: ['physical assessment', 'physical exam', 'physical evaluation'],
+                  shouldBeChecked: false,
+                  displayName: 'Physical Assessment'
+                },
+                {
+                  name: 'Medical Records Review Summary',
+                  keywords: ['medical records review', 'records review summary', 'medical review'],
+                  shouldBeChecked: true,
+                  displayName: 'Medical Records Review Summary'
+                },
+                {
+                  name: 'Tissue Recovery Information',
+                  keywords: ['tissue recovery', 'recovery information', 'tissue recovery info'],
+                  shouldBeChecked: true,
+                  displayName: 'Tissue Recovery Information'
+                },
+                {
+                  name: 'Plasma Dilution',
+                  keywords: ['plasma dilution', 'plasma', 'dilution'],
+                  shouldBeChecked: true,
+                  displayName: 'Plasma Dilution'
+                },
+                {
+                  name: 'Authorization for Tissue Donation',
+                  keywords: ['authorization', 'tissue donation', 'authorization form', 'consent'],
+                  shouldBeChecked: true,
+                  displayName: 'Authorization for Tissue Donation'
+                },
+                {
+                  name: 'Infectious Disease Testing',
+                  keywords: ['infectious disease', 'disease testing', 'serology', 'infectious'],
+                  shouldBeChecked: true,
+                  displayName: 'Infectious Disease Testing'
+                },
+                {
+                  name: 'Medical Records',
+                  keywords: ['medical records', 'medical history', 'clinical records', 'patient records'],
+                  shouldBeChecked: false,
+                  displayName: 'Medical Records'
+                }
+              ];
+
+              // Conditional documents - same as DocumentChecklist
+              const conditionalDocuments = [
+                {
+                  name: 'Autopsy report',
+                  condition: 'Autopsy Performed',
+                  extractionKey: 'autopsy_report',
+                  displayName: 'Autopsy report'
+                },
+                {
+                  name: 'Toxicology report',
+                  condition: 'Toxicology Performed',
+                  extractionKey: 'toxicology_report',
+                  displayName: 'Toxicology report'
+                },
+                {
+                  name: 'Skin Dermal Cultures',
+                  condition: 'Skin Recovery Performed',
+                  extractionKey: 'skin_dermal_cultures',
+                  displayName: 'Skin Dermal Cultures'
+                },
+                {
+                  name: 'Bioburden results',
+                  condition: 'Fresh Tissue Processed Performed',
+                  extractionKey: 'bioburden_results',
+                  displayName: 'Bioburden results'
+                }
+              ];
+
+              // Helper function to check if a document type exists (same as DocumentChecklist)
+              const hasDocument = (keywords: string[]): boolean => {
+                return documents.some(doc => 
+                  keywords.some(keyword => 
+                    doc.document_type?.toLowerCase().includes(keyword.toLowerCase())
+                  )
+                );
+              };
+
+              // Check conditional document status (same as DocumentChecklist)
+              const getConditionalStatus = (extractionKey: string) => {
+                if (!extractionData?.conditional_documents) return null;
+                
+                const conditionalDocs = extractionData.conditional_documents as any;
+                let doc: any = null;
+                
+                if (extractionKey === 'autopsy_report') {
+                  doc = conditionalDocs.autopsy_report;
+                } else if (extractionKey === 'toxicology_report') {
+                  doc = conditionalDocs.toxicology_report;
+                } else if (extractionKey === 'skin_dermal_cultures') {
+                  // Handle both possible field names
+                  doc = conditionalDocs.skin_dermal_cultures || conditionalDocs.skinDermalCultures;
+                } else if (extractionKey === 'bioburden_results') {
+                  doc = conditionalDocs.bioburden_results;
+                }
+                
+                if (!doc) return null;
+                
+                // Check for conditional_status field
+                const status = doc.conditional_status;
+                if (status && typeof status === 'string') {
+                  return status.includes('CONDITION MET') ? 'met' : 'not_met';
+                }
+                
+                return null;
+              };
+
+              // Get reviewer and date for a document (dummy data for now)
+              const getReviewerInfo = (docName: string) => {
+                const reviewers: Record<string, { reviewer: string; date: string }> = {
+                  'Donor Log-In Information Packet': { reviewer: 'Dr. Campbell', date: '14/03/2024' },
+                  'Donor Information': { reviewer: 'Dr. Garcia', date: '14/03/2024' },
+                  'Donor Risk Assessment Interview (DRAI)': { reviewer: 'Dr. Rodriguez', date: '14/03/2024' },
+                  'Physical Assessment': { reviewer: 'Dr. Singh', date: '14/03/2024' },
+                  'Medical Records Review Summary': { reviewer: 'Dr. Patel', date: '14/03/2024' },
+                  'Tissue Recovery Information': { reviewer: 'Dr. Wilson', date: '14/03/2024' },
+                  'Plasma Dilution': { reviewer: 'Dr. Taylor', date: '14/03/2024' },
+                  'Authorization for Tissue Donation': { reviewer: 'Dr. Brown', date: '14/03/2024' },
+                  'Infectious Disease Testing': { reviewer: 'Dr. Martinez', date: '14/03/2024' },
+                  'Medical Records': { reviewer: 'Dr. Lee', date: '14/03/2024' },
+                  'Autopsy report': { reviewer: 'Dr. Anderson', date: '14/03/2024' },
+                  'Toxicology report': { reviewer: 'Dr. Thompson', date: '14/03/2024' },
+                  'Skin Dermal Cultures': { reviewer: 'Dr. White', date: '14/03/2024' },
+                  'Bioburden results': { reviewer: 'Dr. Harris', date: '14/03/2024' }
+                };
+                return reviewers[docName] || { reviewer: 'Dr. Unknown', date: new Date().toLocaleDateString('en-GB') };
+              };
+
+              return (
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h3 className="text-md font-semibold mb-3 flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-gray-700" />
+                    Required Documentation
+                  </h3>
+                  <div className="space-y-2">
+                    {/* Initial Paperwork */}
+                    {initialPaperwork.map((item, index) => {
+                      // Check if document exists OR if it should be marked as checked by default
+                      const isPresent = hasDocument(item.keywords) || (item.shouldBeChecked ?? false);
+                      const reviewerInfo = getReviewerInfo(item.displayName);
+                      
+                      return (
+                        <div
+                          key={index}
+                          className={`flex items-center justify-between p-2 rounded ${
+                            isPresent
+                              ? 'bg-gray-50'
+                              : 'bg-gray-50 opacity-60'
+                          }`}
+                        >
+                          <span className="text-sm text-gray-900">{item.displayName}</span>
+                          <div className="flex items-center gap-3">
+                            {isPresent && (
+                              <>
+                                <span className="text-xs text-gray-500">Reviewed by: {reviewerInfo.reviewer}</span>
+                                <span className="text-xs text-gray-500">{reviewerInfo.date}</span>
+                              </>
+                            )}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              isPresent
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {isPresent ? 'Completed' : 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Conditional Documents */}
+                    {conditionalDocuments.map((item, index) => {
+                      const conditionalStatus = getConditionalStatus(item.extractionKey);
+                      const isPresent = conditionalStatus === 'met';
+                      const reviewerInfo = getReviewerInfo(item.displayName);
+                      
+                      return (
+                        <div
+                          key={`conditional-${index}`}
+                          className={`flex items-center justify-between p-2 rounded ${
+                            isPresent ? 'bg-gray-50' : 'bg-gray-50 opacity-60'
+                          }`}
+                        >
+                          <span className="text-sm text-gray-900">{item.displayName} | {item.condition}</span>
+                          <div className="flex items-center gap-3">
+                            {isPresent && (
+                              <>
+                                <span className="text-xs text-gray-500">Reviewed by: {reviewerInfo.reviewer}</span>
+                                <span className="text-xs text-gray-500">{reviewerInfo.date}</span>
+                              </>
+                            )}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              isPresent
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {isPresent ? 'Completed' : 'Not Performed'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Key Medical Findings */}
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-md font-semibold mb-3 flex items-center">
+                <Stethoscope className="h-4 w-4 mr-2 text-gray-700" />
+                Key Medical Findings
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
+                  <p className="text-xs text-gray-700">
+                    Excellent overall tissue quality with no signs of degeneration or disease.
+                  </p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
+                  <p className="text-xs text-gray-700">
+                    DEXA scan from 3 months ago shows excellent bone density. T-score: +0.2
+                  </p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
+                  <p className="text-xs text-gray-700">
+                    No history of cardiovascular disease. Recent echocardiogram normal.
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
+                  <p className="text-xs text-gray-700">
+                    Well-controlled asthma with infrequent inhaler use. No impact on tissue quality.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Critical Findings */}
+            {criticalFindings.length > 0 && (
               <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-md font-semibold mb-3 flex items-center">
-                  <FileCheck className="h-4 h-4 mr-2 text-gray-700" />
-                  Required Documentation
+                <h3 className="text-md font-semibold mb-3 flex items-center text-red-700">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Critical Findings
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {donor.requiredDocuments.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm">{doc.label}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        doc.status === 'uploaded' ? 'bg-green-100 text-green-800' :
-                        doc.status === 'missing' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {doc.status}
+                <div className="space-y-2">
+                  {criticalFindings.map((finding, index) => (
+                    <div key={index} className="bg-red-50 p-3 rounded-lg border border-red-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-red-900">{finding.type}</p>
+                          <p className="text-xs text-red-700 mt-1">Severity: {finding.severity}</p>
+                          {finding.automaticRejection && (
+                            <p className="text-xs text-red-800 font-medium mt-1">Automatic Rejection</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Missing Documents */}
+            {missingDocuments.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-md font-semibold mb-3 flex items-center text-yellow-700">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Missing Documents
+                </h3>
+                <div className="space-y-2">
+                  {missingDocuments.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-yellow-50 rounded border border-yellow-200">
+                      <span className="text-sm text-gray-900">{doc.label}</span>
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Missing
                       </span>
                     </div>
                   ))}
@@ -295,136 +730,8 @@ export default function Summary() {
               </div>
             )}
 
-            {/* Compliance Status Summary */}
-            {extractionData && (extractionData.compliance_status || extractionData.validation) && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-md font-semibold mb-3 flex items-center">
-                  <Shield className="h-4 w-4 mr-2 text-gray-700" />
-                  Compliance & Validation Status
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {extractionData.compliance_status && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm">AATB Compliant</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          extractionData.compliance_status.aatb_compliant
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {extractionData.compliance_status.aatb_compliant ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm">Ready for Distribution</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          extractionData.compliance_status.ready_for_distribution
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {extractionData.compliance_status.ready_for_distribution ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {extractionData.validation && (
-                    <div className="space-y-2">
-                      <div className="p-2 bg-gray-50 rounded">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm">Validation Progress</span>
-                          <span className="text-sm font-semibold text-blue-600">
-                            {extractionData.validation.checklist_status.completion_percentage.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{
-                              width: `${extractionData.validation.checklist_status.completion_percentage}%`,
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {extractionData.validation.checklist_status.total_items_complete} /{' '}
-                          {extractionData.validation.checklist_status.total_required_items} items complete
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* AI Intelligence Insights */}
-            {donor && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-md font-semibold mb-3 flex items-center text-indigo-700">
-                  <Brain className="h-4 w-4 mr-2" />
-                  AI Intelligence Insights
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Tissue Analysis Overview */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-medium text-gray-500">Tissue Analysis</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-green-50 p-2 rounded">
-                        <div className="text-xs text-green-800">Eligible</div>
-                        <div className="text-lg font-semibold text-green-600">
-                          {mockTissueAnalysis.filter(t => t.status === 'Eligible').length}
-                        </div>
-                      </div>
-                      <div className="bg-yellow-50 p-2 rounded">
-                        <div className="text-xs text-yellow-800">Review Required</div>
-                        <div className="text-lg font-semibold text-yellow-600">
-                          {mockTissueAnalysis.filter(t => t.status === 'Review Required').length}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* AI Confidence */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-medium text-gray-500">AI Confidence</h4>
-                    <div className="bg-blue-50 p-2 rounded">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-blue-800">Overall Confidence</span>
-                        <span className="text-sm font-semibold text-blue-600">94%</span>
-                      </div>
-                      <div className="w-full bg-blue-200 rounded-full h-1.5 mt-1">
-                        <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '94%' }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Key Recommendations */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-medium text-gray-500">Key Recommendations</h4>
-                    <div className="bg-indigo-50 p-2 rounded">
-                      <ul className="space-y-1 text-sm text-indigo-900">
-                        <li className="flex items-center">
-                          <CheckCircle className="w-3 h-3 text-indigo-600 mr-1" />
-                          MS Tissue: High probability match
-                        </li>
-                        <li className="flex items-center">
-                          <AlertTriangle className="w-3 h-3 text-yellow-600 mr-1" />
-                          Additional serology recommended
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Historical Comparison */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-medium text-gray-500">Historical Comparison</h4>
-                    <div className="bg-purple-50 p-2 rounded">
-                      <div className="text-xs text-purple-800">Similar Cases Success Rate</div>
-                      <div className="text-lg font-semibold text-purple-600">87%</div>
-                      <div className="text-xs text-purple-700">Based on 145 similar cases</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Past Data Section - Historical Approval/Rejection Records */}
+            <PastDataSection data={pastData} loading={loadingPastData} />
           </div>
         );
 
@@ -473,7 +780,7 @@ export default function Summary() {
                           href="#infectious-disease"
                           onClick={(e) => {
                             e.preventDefault();
-                            setActiveTab('infectious-disease');
+                            handleTabChange('infectious-disease');
                           }}
                           className="text-xs text-blue-600 hover:text-blue-800"
                         >
@@ -653,7 +960,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} />;
+        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} onCitationClick={handleCitationClick} />;
 
       case 'authorization':
         if (!extractionData?.extracted_data?.authorization) {
@@ -663,7 +970,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <AuthorizationSection data={extractionData.extracted_data.authorization} />;
+        return <AuthorizationSection data={extractionData.extracted_data.authorization} onCitationClick={handleCitationClick} />;
 
       case 'drai':
         if (!extractionData?.extracted_data?.drai) {
@@ -673,7 +980,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <DRAISection data={extractionData.extracted_data.drai} />;
+        return <DRAISection data={extractionData.extracted_data.drai} onCitationClick={handleCitationClick} />;
 
       case 'infectious-disease':
         if (!extractionData?.extracted_data?.infectious_disease_testing) {
@@ -686,6 +993,7 @@ export default function Summary() {
         return (
           <InfectiousDiseaseSection
             data={extractionData.extracted_data.infectious_disease_testing}
+            onCitationClick={handleCitationClick}
           />
         );
 
@@ -697,7 +1005,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <TissueRecoverySection data={extractionData.extracted_data.tissue_recovery} />;
+        return <TissueRecoverySection data={extractionData.extracted_data.tissue_recovery} onCitationClick={handleCitationClick} />;
 
 
       case 'conditional-docs':
@@ -708,7 +1016,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <ConditionalDocumentsSection data={extractionData.conditional_documents} />;
+        return <ConditionalDocumentsSection data={extractionData.conditional_documents} onCitationClick={handleCitationClick} />;
 
       case 'plasma-dilution':
         if (!extractionData?.extracted_data?.plasma_dilution) {
@@ -718,10 +1026,36 @@ export default function Summary() {
             </div>
           );
         }
-        return <PlasmaDilutionSection data={extractionData.extracted_data.plasma_dilution} />;
+        return <PlasmaDilutionSection data={extractionData.extracted_data.plasma_dilution} onCitationClick={handleCitationClick} />;
 
       default:
         return null;
+    }
+  };
+
+  // Handle citation click
+  const handleCitationClick = (sourceDocument: string, pageNumber?: number) => {
+    // Find the document by matching the source document name
+    const matchingDoc = documents.find(doc => {
+      const docName = doc.filename || doc.original_filename || '';
+      const sourceName = sourceDocument.toLowerCase();
+      return docName.toLowerCase().includes(sourceName) || 
+             sourceName.includes(docName.toLowerCase()) ||
+             doc.document_type?.toLowerCase().includes(sourceName);
+    });
+    
+    if (matchingDoc?.azure_blob_url) {
+      setSelectedPdfUrl(matchingDoc.azure_blob_url);
+      setSelectedPageNumber(pageNumber || undefined);
+      setSelectedDocumentName(matchingDoc.filename || matchingDoc.original_filename || sourceDocument);
+    } else {
+      // Try to find any document with PDF URL as fallback
+      const pdfDoc = documents.find(doc => doc.azure_blob_url);
+      if (pdfDoc?.azure_blob_url) {
+        setSelectedPdfUrl(pdfDoc.azure_blob_url);
+        setSelectedPageNumber(pageNumber || undefined);
+        setSelectedDocumentName(pdfDoc.filename || pdfDoc.original_filename || sourceDocument);
+      }
     }
   };
 
@@ -729,13 +1063,40 @@ export default function Summary() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Back Button */}
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(`/documents/${id}`)}
+          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          <span className="text-sm font-medium">Back to Documents</span>
+        </button>
+      </div>
+
+      {/* Approval/Rejection Actions - Visible to Medical Directors */}
+      {(userRole === 'medical_director' || userRole === 'admin') && (
+        <div className="mb-6 flex justify-end space-x-3">
+          <Button
+            onClick={() => {
+              setApprovalType('donor_summary');
+              setShowApprovalModal(true);
+            }}
+            variant="primary"
+          >
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Approve/Reject Donor Summary
+          </Button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-8 overflow-x-auto">
         <nav className="-mb-px flex space-x-8 min-w-max" aria-label="Tabs">
           {SUMMARY_TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`
                 group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap
                 ${
@@ -769,14 +1130,48 @@ export default function Summary() {
         </div>
       )}
 
-      {/* Tab Content */}
-      {renderTabContent()}
+      {/* Tab Content with PDF Viewer */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={selectedPdfUrl ? "lg:col-span-2" : "lg:col-span-3"}>
+          {renderTabContent()}
+        </div>
+        {/* PDF Viewer Sidebar - Only shown when citation is clicked */}
+        {selectedPdfUrl && (
+          <div className="lg:col-span-1 sticky top-4 h-[calc(100vh-2rem)]">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200 h-full flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">
+                    {selectedDocumentName || 'Document'}
+                  </h3>
+                  {selectedPageNumber && (
+                    <p className="text-xs text-gray-500">Page {selectedPageNumber}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedPdfUrl(null);
+                    setSelectedPageNumber(null);
+                    setSelectedDocumentName(null);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors ml-2 flex-shrink-0"
+                  aria-label="Close viewer"
+                >
+                  <XCircle className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  src={selectedPageNumber ? `${selectedPdfUrl}#page=${selectedPageNumber}` : selectedPdfUrl}
+                  className="w-full h-full border-0"
+                  title="PDF Viewer"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* Add the chat component */}
-      <SummaryChat 
-        donorId={id || ''} 
-        donorName={donor?.donorName} 
-      />
 
       {/* Finding Details Modal */}
       {selectedFinding && (
@@ -784,6 +1179,19 @@ export default function Summary() {
           finding={selectedFinding}
           isOpen={!!selectedFinding}
           onClose={() => setSelectedFinding(null)}
+        />
+      )}
+
+      {/* Approval/Rejection Modal */}
+      {showApprovalModal && (
+        <ApprovalRejectionModal
+          isOpen={showApprovalModal}
+          onClose={() => setShowApprovalModal(false)}
+          onConfirm={handleApprovalRejection}
+          donorId={Number(id)}
+          documentId={null}
+          approvalType={approvalType}
+          donorName={donor?.donorName}
         />
       )}
     </div>
