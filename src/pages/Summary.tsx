@@ -249,8 +249,8 @@ export default function Summary() {
           if (currentDonorDetails) {
             setCriticalFindings(currentDonorDetails.criticalFindings || []);
             setMissingDocuments(currentDonorDetails.requiredDocuments?.filter((doc: any) => doc.status === 'missing') || []);
-          }
-        } catch (err) {
+        }
+      } catch (err) {
           console.error('Error fetching donor details:', err);
           // Use dummy data if API fails
           setCriticalFindings([]);
@@ -573,11 +573,11 @@ export default function Summary() {
               };
 
               return (
-                <div className="bg-white rounded-lg shadow p-4">
-                  <h3 className="text-md font-semibold mb-3 flex items-center">
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-md font-semibold mb-3 flex items-center">
                     <FileText className="h-4 w-4 mr-2 text-gray-700" />
-                    Required Documentation
-                  </h3>
+                  Required Documentation
+                </h3>
                   <div className="space-y-2">
                     {/* Initial Paperwork */}
                     {initialPaperwork.map((item, index) => {
@@ -606,14 +606,14 @@ export default function Summary() {
                               isPresent
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-200 text-gray-600'
-                            }`}>
+                      }`}>
                               {isPresent ? 'Completed' : 'Pending'}
-                            </span>
-                          </div>
-                        </div>
+                      </span>
+                    </div>
+                </div>
                       );
                     })}
-                    
+
                     {/* Conditional Documents */}
                     {conditionalDocuments.map((item, index) => {
                       const conditionalStatus = getConditionalStatus(item.extractionKey);
@@ -652,38 +652,38 @@ export default function Summary() {
             })()}
 
             {/* Key Medical Findings */}
-            <div className="bg-white rounded-lg shadow p-4">
+              <div className="bg-white rounded-lg shadow p-4">
               <h3 className="text-md font-semibold mb-3 flex items-center">
                 <Stethoscope className="h-4 w-4 mr-2 text-gray-700" />
                 Key Medical Findings
-              </h3>
+                </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
                   <p className="text-xs text-gray-700">
                     Excellent overall tissue quality with no signs of degeneration or disease.
                   </p>
-                </div>
+                        </div>
                 <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
                   <p className="text-xs text-gray-700">
                     DEXA scan from 3 months ago shows excellent bone density. T-score: +0.2
                   </p>
-                </div>
+                      </div>
                 <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
                   <p className="text-xs text-gray-700">
                     No history of cardiovascular disease. Recent echocardiogram normal.
                   </p>
-                </div>
+                        </div>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
                   <p className="text-xs text-gray-700">
                     Well-controlled asthma with infrequent inhaler use. No impact on tissue quality.
                   </p>
-                </div>
-              </div>
-            </div>
+                      </div>
+                    </div>
+                  </div>
 
             {/* Critical Findings */}
             {criticalFindings.length > 0 && (
@@ -702,12 +702,12 @@ export default function Summary() {
                           {finding.automaticRejection && (
                             <p className="text-xs text-red-800 font-medium mt-1">Automatic Rejection</p>
                           )}
-                        </div>
+                      </div>
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
+                  </div>
+                    </div>
             )}
 
             {/* Missing Documents */}
@@ -789,26 +789,26 @@ export default function Summary() {
                       </div>
                     </div>
                   ) : (
-                    <div>
-                      <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        {[
-                          { test: 'HIV', result: 'Negative', status: 'success' },
-                          { test: 'HBV', result: 'Negative', status: 'success' },
-                          { test: 'HCV', result: 'Negative', status: 'success' },
-                          { test: 'CMV', result: 'Positive', status: 'warning' }
-                        ].map((item) => (
-                          <div key={item.test} className="bg-gray-50 p-2 rounded">
-                            <div className="text-xs text-gray-500">{item.test}</div>
-                            <div className={`text-sm font-medium ${
-                              item.status === 'success' ? 'text-green-600' : 'text-yellow-600'
-                            }`}>
-                              {item.result}
-                            </div>
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { test: 'HIV', result: 'Negative', status: 'success' },
+                        { test: 'HBV', result: 'Negative', status: 'success' },
+                        { test: 'HCV', result: 'Negative', status: 'success' },
+                        { test: 'CMV', result: 'Positive', status: 'warning' }
+                      ].map((item) => (
+                        <div key={item.test} className="bg-gray-50 p-2 rounded">
+                          <div className="text-xs text-gray-500">{item.test}</div>
+                          <div className={`text-sm font-medium ${
+                            item.status === 'success' ? 'text-green-600' : 'text-yellow-600'
+                          }`}>
+                            {item.result}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
+                  </div>
                   )}
 
                   {/* Culture Results */}
@@ -954,10 +954,10 @@ export default function Summary() {
 
       case 'physical-assessment':
         if (!extractionData?.extracted_data?.physical_assessment) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
+        return (
+              <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Physical assessment data not available.</p>
-            </div>
+                  </div>
           );
         }
         return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} onCitationClick={handleCitationClick} />;
@@ -967,7 +967,7 @@ export default function Summary() {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Authorization data not available.</p>
-            </div>
+                  </div>
           );
         }
         return <AuthorizationSection data={extractionData.extracted_data.authorization} onCitationClick={handleCitationClick} />;
@@ -977,7 +977,7 @@ export default function Summary() {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">DRAI data not available.</p>
-            </div>
+                    </div>
           );
         }
         return <DRAISection data={extractionData.extracted_data.drai} onCitationClick={handleCitationClick} />;
@@ -987,7 +987,7 @@ export default function Summary() {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Infectious disease testing data not available.</p>
-            </div>
+                    </div>
           );
         }
         return (
@@ -1002,7 +1002,7 @@ export default function Summary() {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Tissue recovery data not available.</p>
-            </div>
+                    </div>
           );
         }
         return <TissueRecoverySection data={extractionData.extracted_data.tissue_recovery} onCitationClick={handleCitationClick} />;
@@ -1013,18 +1013,18 @@ export default function Summary() {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Conditional documents data not available.</p>
-            </div>
-          );
+          </div>
+        );
         }
         return <ConditionalDocumentsSection data={extractionData.conditional_documents} onCitationClick={handleCitationClick} />;
 
       case 'plasma-dilution':
         if (!extractionData?.extracted_data?.plasma_dilution) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
+        return (
+          <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Plasma dilution data not available.</p>
-            </div>
-          );
+          </div>
+        );
         }
         return <PlasmaDilutionSection data={extractionData.extracted_data.plasma_dilution} onCitationClick={handleCitationClick} />;
 
@@ -1116,7 +1116,7 @@ export default function Summary() {
       {/* Tab Content with PDF Viewer */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className={selectedPdfUrl ? "lg:col-span-2" : "lg:col-span-3"}>
-          {renderTabContent()}
+      {renderTabContent()}
         </div>
         {/* PDF Viewer Sidebar - Only shown when citation is clicked */}
         {selectedPdfUrl && (
