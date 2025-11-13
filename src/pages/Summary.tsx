@@ -1035,28 +1035,11 @@ export default function Summary() {
 
   // Handle citation click
   const handleCitationClick = (sourceDocument: string, pageNumber?: number) => {
-    // Find the document by matching the source document name
-    const matchingDoc = documents.find(doc => {
-      const docName = doc.filename || doc.original_filename || '';
-      const sourceName = sourceDocument.toLowerCase();
-      return docName.toLowerCase().includes(sourceName) || 
-             sourceName.includes(docName.toLowerCase()) ||
-             doc.document_type?.toLowerCase().includes(sourceName);
-    });
-    
-    if (matchingDoc?.azure_blob_url) {
-      setSelectedPdfUrl(matchingDoc.azure_blob_url);
-      setSelectedPageNumber(pageNumber || undefined);
-      setSelectedDocumentName(matchingDoc.filename || matchingDoc.original_filename || sourceDocument);
-    } else {
-      // Try to find any document with PDF URL as fallback
-      const pdfDoc = documents.find(doc => doc.azure_blob_url);
-      if (pdfDoc?.azure_blob_url) {
-        setSelectedPdfUrl(pdfDoc.azure_blob_url);
-        setSelectedPageNumber(pageNumber || undefined);
-        setSelectedDocumentName(pdfDoc.filename || pdfDoc.original_filename || sourceDocument);
-      }
-    }
+    // Always use the local chart review PDF document
+    const localPdfUrl = '/chart-review-document.pdf';
+    setSelectedPdfUrl(localPdfUrl);
+    setSelectedPageNumber(pageNumber || undefined);
+    setSelectedDocumentName(sourceDocument || 'Initial and Conditional documents for chart review');
   };
 
   if (!donor) return null;
@@ -1160,12 +1143,24 @@ export default function Summary() {
                   <XCircle className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <iframe
-                  src={selectedPageNumber ? `${selectedPdfUrl}#page=${selectedPageNumber}` : selectedPdfUrl}
-                  className="w-full h-full border-0"
-                  title="PDF Viewer"
-                />
+              <div className="flex-1 overflow-hidden bg-gray-50">
+                {selectedPdfUrl ? (
+                  <iframe
+                    key={`${selectedPdfUrl}-${selectedPageNumber || 1}`}
+                    src={`${selectedPdfUrl}${selectedPageNumber ? `#page=${selectedPageNumber}` : ''}`}
+                    className="w-full h-full border-0"
+                    title="PDF Viewer"
+                    style={{ minHeight: '500px' }}
+                    allow="fullscreen"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="text-center">
+                      <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No document selected</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

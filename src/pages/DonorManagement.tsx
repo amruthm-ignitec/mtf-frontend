@@ -306,21 +306,21 @@ export default function DonorManagement() {
       render: (donor: DonorWithDetails & { isLatestDonor?: boolean }) => (
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="text-sm font-medium text-gray-900">{donor.name}</div>
-            <button
+          <div className="text-sm font-medium text-gray-900">{donor.name}</div>
+        <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleTogglePriority(donor.id, donor.is_priority);
               }}
               className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                donor.is_priority
-                  ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}
-            >
-              <Star className={`w-3 h-3 mr-1 ${donor.is_priority ? 'text-yellow-600' : 'text-gray-400'}`} />
-              {donor.is_priority ? 'High Priority' : 'Normal'}
-            </button>
+            donor.is_priority
+              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+          }`}
+        >
+          <Star className={`w-3 h-3 mr-1 ${donor.is_priority ? 'text-yellow-600' : 'text-gray-400'}`} />
+          {donor.is_priority ? 'High Priority' : 'Normal'}
+        </button>
           </div>
           <div className="text-xs text-gray-500">ID: {donor.unique_donor_id}</div>
           <div className="text-xs text-gray-600">

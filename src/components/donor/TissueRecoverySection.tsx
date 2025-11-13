@@ -4,6 +4,7 @@ import { Package, MapPin } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import TissueEligibilityAnalysis from './TissueEligibilityAnalysis';
 
 interface TissueRecoverySectionProps {
   data: TissueRecovery;
@@ -40,6 +41,9 @@ export default function TissueRecoverySection({ data, onCitationClick }: TissueR
           </div>
         </div>
       </Card>
+
+      {/* Tissue Eligibility Analysis */}
+      <TissueEligibilityAnalysis />
     </div>
   );
 }
