@@ -1,102 +1,93 @@
 import React from 'react';
-import { PlasmaDilution } from '../../types/extraction';
-import { Droplets, Scale, Calculator } from 'lucide-react';
-import StatusBadge from '../ui/StatusBadge';
+import { Droplets, Calculator, FileText } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
 interface PlasmaDilutionSectionProps {
-  data: PlasmaDilution;
+  data: any; // Accept flexible data structure from backend
   onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
 export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaDilutionSectionProps) {
-  const { transfusion_status, status, confidence } = data;
-
-  // Calculate TPV and TBV based on weight
-  const calculateTPV = (weightKg: number) => {
-    return weightKg / 0.025;
-  };
-
-  const calculateTBV = (weightKg: number) => {
-    return weightKg / 0.015;
-  };
-
-  const tpv = transfusion_status.donor_weight_kg
-    ? calculateTPV(transfusion_status.donor_weight_kg)
-    : 0;
-  const tbv = transfusion_status.donor_weight_kg
-    ? calculateTBV(transfusion_status.donor_weight_kg)
-    : 0;
+  // Handle both old structure and new backend structure
+  const summary = data?.summary || {};
+  const extractedData = data?.extracted_data || {};
+  const pages = data?.pages || [];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Plasma Dilution</h2>
-        <StatusBadge status={status} />
+        {data?.present !== undefined && (
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            data.present ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {data.present ? 'Present' : 'Not Present'}
+          </span>
+        )}
       </div>
 
-      {/* Transfusion Status */}
-      <Card className="p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <Droplets className="w-5 h-5 text-red-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Transfusion Status</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-red-50 p-4 rounded-lg">
-            <label className="text-xs font-medium text-gray-500">Transfused</label>
-            <p className="text-lg font-semibold text-red-900 mt-1">
-              {transfusion_status.transfused ? 'Yes' : 'No'}
-            </p>
+      {/* Summary Section */}
+      {summary && Object.keys(summary).length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Droplets className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Summary</h3>
           </div>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center space-x-2 mb-2">
-              <Scale className="w-4 h-4 text-gray-500" />
-              <label className="text-xs font-medium text-gray-500">Donor Weight</label>
-            </div>
-            <p className="text-lg font-semibold text-blue-900">
-              {transfusion_status.donor_weight_kg} kg
-            </p>
+          <div className="space-y-3">
+            {Object.entries(summary).map(([key, value]) => (
+              value && (
+                <div key={key}>
+                  <label className="text-sm font-medium text-gray-500">{key}</label>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                  </p>
+                </div>
+              )
+            ))}
           </div>
-        </div>
-        {transfusion_status.source_document && (
-          <div className="mt-4">
-            <CitationBadge
-              pageNumber={1}
-              documentName={transfusion_status.source_document}
-              onClick={() => onCitationClick?.(transfusion_status.source_document, 1)}
-            />
-          </div>
-        )}
-      </Card>
+        </Card>
+      )}
 
-      {/* Volume Calculations */}
-      {transfusion_status.donor_weight_kg > 0 && (
+      {/* Extracted Data Section */}
+      {extractedData && Object.keys(extractedData).length > 0 && (
         <Card className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <Calculator className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Estimated Volumes</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Extracted Data</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <label className="text-xs font-medium text-gray-500">Total Plasma Volume (TPV)</label>
-              <p className="text-2xl font-bold text-purple-900 mt-1">
-                {tpv.toFixed(2)} mls
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Calculated: {transfusion_status.donor_weight_kg} kg / 0.025
-              </p>
-            </div>
-            <div className="bg-indigo-50 p-4 rounded-lg">
-              <label className="text-xs font-medium text-gray-500">Total Blood Volume (TBV)</label>
-              <p className="text-2xl font-bold text-indigo-900 mt-1">
-                {tbv.toFixed(2)} mls
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Calculated: {transfusion_status.donor_weight_kg} kg / 0.015
-              </p>
-            </div>
+            {Object.entries(extractedData).map(([key, value]) => (
+              value && (
+                <div key={key} className="bg-gray-50 p-4 rounded-lg">
+                  <label className="text-xs font-medium text-gray-500">{key.replace(/_/g, ' ')}</label>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">
+                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                  </p>
+                </div>
+              )
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Source Pages */}
+      {pages && pages.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <FileText className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Source Pages</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pages.map((page: number, idx: number) => (
+              <CitationBadge
+                key={idx}
+                pageNumber={page}
+                documentName="Plasma Dilution"
+                onClick={() => onCitationClick?.('Plasma Dilution', page)}
+              />
+            ))}
           </div>
         </Card>
       )}
