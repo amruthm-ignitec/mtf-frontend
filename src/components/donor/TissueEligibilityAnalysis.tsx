@@ -133,7 +133,20 @@ const mockTissueEligibility: TissueEligibility[] = [
 ];
 
 export default function TissueEligibilityAnalysis({ eligibilityData }: TissueEligibilityAnalysisProps) {
-  const tissueEligibility = eligibilityData || mockTissueEligibility;
+  // Use eligibilityData if available, otherwise fall back to mock data
+  const tissueEligibility: TissueEligibility[] = eligibilityData && eligibilityData.length > 0 
+    ? eligibilityData.map((item: any) => ({
+        id: item.id || '',
+        name: item.name || '-',
+        category: item.category || 'Musculoskeletal',
+        status: item.status || 'Review Required',
+        confidenceScore: item.confidenceScore || 0,
+        factors: item.factors || [],
+        similarCases: item.similarCases || { count: 0, successRate: 0, trend: 'Stable' },
+        description: item.description || ''
+      }))
+    : mockTissueEligibility;
+  
   const [selectedTissue, setSelectedTissue] = useState<TissueEligibility | null>(tissueEligibility[0] || null);
 
   const getStatusIcon = (status: string) => {
@@ -247,9 +260,12 @@ export default function TissueEligibilityAnalysis({ eligibilityData }: TissueEli
                             Confidence Score: <span className="font-semibold">{tissue.confidenceScore}%</span>
                           </span>
                         </div>
-                        <div className="mt-2 text-xs text-gray-600">
-                          Key factors: {tissue.factors.slice(0, 2).map(f => f.name).join(', ')} and +{tissue.factors.length - 2} more factors
-                        </div>
+                        {tissue.factors && tissue.factors.length > 0 && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            Key factors: {tissue.factors.slice(0, 2).map(f => f.name || '-').join(', ')}
+                            {tissue.factors.length > 2 && ` and +${tissue.factors.length - 2} more factors`}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span
@@ -290,16 +306,57 @@ export default function TissueEligibilityAnalysis({ eligibilityData }: TissueEli
                   <div className="mt-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Confidence Score:</span>
-                      <span className="font-semibold text-gray-900">{selectedTissue.confidenceScore}%</span>
+                      <span className="font-semibold text-gray-900">{selectedTissue.confidenceScore || '-'}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Similar Cases:</span>
-                      <span className="font-semibold text-gray-900">{selectedTissue.similarCases.count}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Success Rate:</span>
-                      <span className="font-semibold text-green-600">{selectedTissue.similarCases.successRate}%</span>
-                    </div>
+                    {selectedTissue.similarCases && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Similar Cases:</span>
+                          <span className="font-semibold text-gray-900">{selectedTissue.similarCases.count || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Success Rate:</span>
+                          <span className="font-semibold text-green-600">
+                            {selectedTissue.similarCases.successRate ? `${selectedTissue.similarCases.successRate}%` : '-'}
+                          </span>
+                        </div>
+                        {selectedTissue.similarCases.trend && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Trend:</span>
+                            <span className="font-semibold text-gray-900">{selectedTissue.similarCases.trend}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Factors Section */}
+                    {selectedTissue.factors && selectedTissue.factors.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Eligibility Factors</h5>
+                        <div className="space-y-2">
+                          {selectedTissue.factors.map((factor, idx) => (
+                            <div key={idx} className={`p-2 rounded ${
+                              factor.positiveImpact ? 'bg-green-50' : 'bg-red-50'
+                            }`}>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="text-xs font-medium text-gray-900">{factor.name || '-'}</div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    Current: {factor.currentValue || '-'} | Required: {factor.requirement || '-'}
+                                  </div>
+                                </div>
+                                <div className={`text-xs font-semibold ml-2 ${
+                                  factor.positiveImpact ? 'text-green-700' : 'text-red-700'
+                                }`}>
+                                  {factor.impact > 0 ? '+' : ''}{factor.impact}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     {selectedTissue.description && (
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <h5 className="text-sm font-semibold text-gray-900 mb-2">Summary</h5>

@@ -1034,24 +1034,27 @@ export default function Summary() {
 
 
       case 'physical-assessment':
+        // Show partial data if available
         if (!extractionData?.extracted_data?.physical_assessment) {
-        return (
-              <div className="bg-white rounded-lg shadow p-6">
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Physical assessment data not available.</p>
-                  </div>
+            </div>
           );
         }
         return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} onCitationClick={handleCitationClick} />;
 
       case 'authorization':
-        if (!extractionData?.extracted_data?.authorization) {
+        // Check for authorization_for_tissue_donation key
+        const authorizationData = extractionData?.extracted_data?.authorization_for_tissue_donation || extractionData?.extracted_data?.authorization;
+        if (!authorizationData) {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Authorization data not available.</p>
-                  </div>
+            </div>
           );
         }
-        return <AuthorizationSection data={extractionData.extracted_data.authorization} onCitationClick={handleCitationClick} />;
+        return <AuthorizationSection data={authorizationData} onCitationClick={handleCitationClick} />;
 
       case 'drai':
         if (!extractionData?.extracted_data?.donor_risk_assessment_interview && !extractionData?.extracted_data?.drai) {
@@ -1066,34 +1069,47 @@ export default function Summary() {
         return <DRAISection data={draiData} onCitationClick={handleCitationClick} />;
 
       case 'infectious-disease':
-        if (!extractionData?.extracted_data?.infectious_disease_testing) {
+        // Show infectious disease tab if we have any related data
+        const infectiousDiseaseData = extractionData?.extracted_data?.infectious_disease_testing;
+        const hasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
+        const hasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
+        const hasCriticalLabs = extractionData?.critical_lab_values && Object.values(extractionData.critical_lab_values).some(v => v !== null);
+        
+        if (!infectiousDiseaseData && !hasSerology && !hasCulture && !hasCriticalLabs) {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Infectious disease testing data not available.</p>
-                    </div>
+            </div>
           );
         }
+        
         return (
           <InfectiousDiseaseSection
-            data={extractionData.extracted_data.infectious_disease_testing}
-            serologyResults={extractionData.serology_results?.result}
-            cultureResults={extractionData.culture_results?.result}
-            criticalLabValues={extractionData.critical_lab_values}
+            data={infectiousDiseaseData}
+            serologyResults={extractionData?.serology_results?.result}
+            cultureResults={extractionData?.culture_results?.result}
+            criticalLabValues={extractionData?.critical_lab_values}
             onCitationClick={handleCitationClick}
           />
         );
 
       case 'tissue-recovery':
-        if (!extractionData?.extracted_data?.tissue_recovery) {
+        // Show tissue recovery tab if we have either tissue_recovery_information or tissue_eligibility
+        const tissueRecoveryData = extractionData?.extracted_data?.tissue_recovery_information || extractionData?.extracted_data?.tissue_recovery;
+        const eligibilityData = extractionData?.tissue_eligibility;
+        
+        // Always show the tab if we have eligibility data, even if recovery info is missing
+        if (!tissueRecoveryData && !eligibilityData) {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Tissue recovery data not available.</p>
-                    </div>
+            </div>
           );
         }
+        
         return <TissueRecoverySection 
-          data={extractionData.extracted_data.tissue_recovery} 
-          eligibilityData={extractionData.tissue_eligibility}
+          data={tissueRecoveryData} 
+          eligibilityData={eligibilityData}
           onCitationClick={handleCitationClick} 
         />;
 
@@ -1109,14 +1125,15 @@ export default function Summary() {
         return <ConditionalDocumentsSection data={extractionData.conditional_documents} onCitationClick={handleCitationClick} />;
 
       case 'plasma-dilution':
-        if (!extractionData?.extracted_data?.plasma_dilution) {
-        return (
-          <div className="bg-white rounded-lg shadow p-6">
+        const plasmaDilutionData = extractionData?.extracted_data?.plasma_dilution;
+        if (!plasmaDilutionData) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">Plasma dilution data not available.</p>
-          </div>
-        );
+            </div>
+          );
         }
-        return <PlasmaDilutionSection data={extractionData.extracted_data.plasma_dilution} onCitationClick={handleCitationClick} />;
+        return <PlasmaDilutionSection data={plasmaDilutionData} onCitationClick={handleCitationClick} />;
 
       default:
         return null;
