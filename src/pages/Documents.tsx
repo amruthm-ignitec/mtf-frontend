@@ -437,18 +437,20 @@ export default function Documents() {
         emptyMessage="No documents found. Upload documents to get started."
       />
 
-      {/* Document Status Details */}
-      {filteredDocuments.length > 0 && (
+      {/* Document Status Details - Only show non-completed documents */}
+      {filteredDocuments.filter(doc => doc.status !== 'completed').length > 0 && (
         <div className="mt-8 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Processing Status</h2>
-          {filteredDocuments.map((doc) => (
-            <DocumentStatusSlider
-              key={doc.id}
-              status={doc.status}
-              progress={doc.progress}
-              errorMessage={doc.error_message}
-            />
-          ))}
+          {filteredDocuments
+            .filter(doc => doc.status !== 'completed')
+            .map((doc) => (
+              <DocumentStatusSlider
+                key={doc.id}
+                status={doc.status}
+                progress={doc.progress}
+                errorMessage={doc.error_message}
+              />
+            ))}
         </div>
       )}
     </div>
