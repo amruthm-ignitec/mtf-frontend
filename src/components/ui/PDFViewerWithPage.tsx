@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 // Set up PDF.js worker - use the worker from the installed pdfjs-dist package
 // This avoids CDN issues and protocol-relative URL problems
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+}
 
 interface PDFViewerWithPageProps {
   pdfUrl: string;
@@ -20,10 +22,10 @@ export default function PDFViewerWithPage({
   onClose,
   documentName,
 }: PDFViewerWithPageProps) {
-  const [numPages, setNumPages] = React.useState<number | null>(null);
-  const [currentPage, setCurrentPage] = React.useState(pageNumber);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(pageNumber);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +43,7 @@ export default function PDFViewerWithPage({
   }, [currentPage, numPages]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    console.log('PDF document loaded successfully:', { numPages, pdfUrl });
     setNumPages(numPages);
     setLoading(false);
     setError(null);
@@ -57,9 +60,16 @@ export default function PDFViewerWithPage({
   };
 
   const onDocumentLoadError = (error: Error) => {
-    console.error('PDF load error:', error);
+    console.error('PDF document load error:', error);
+    console.error('PDF URL:', pdfUrl);
     setError(`Failed to load PDF: ${error.message}`);
     setLoading(false);
+  };
+
+  const onPageLoadError = (error: Error) => {
+    console.warn('PDF page load error:', error);
+    // Don't set error state for page errors - just log them
+    // The page will show a placeholder or skip rendering
   };
 
   // Calculate width for sidebar (approximately 1/3 of screen)
@@ -97,9 +107,10 @@ export default function PDFViewerWithPage({
                 httpHeaders: {
                   'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
                 },
+                withCredentials: false,
               }}
             >
-              {pagesToRender.map((pageNum) => {
+              {loading && numPages === null ? null : pagesToRender.map((pageNum) => {
                 const isTargetPage = pageNum === currentPage;
                 
                 return (
@@ -110,12 +121,18 @@ export default function PDFViewerWithPage({
                   >
                     <Page
                       pageNumber={pageNum}
-                      renderTextLayer={true}
+                      renderTextLayer={false}
                       renderAnnotationLayer={true}
                       width={pageWidth}
+                      onLoadError={onPageLoadError}
                       loading={
                         <div className="flex items-center justify-center p-4 bg-white rounded shadow min-h-[400px]">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        </div>
+                      }
+                      error={
+                        <div className="flex items-center justify-center p-4 bg-white rounded shadow min-h-[400px] border border-red-200">
+                          <p className="text-sm text-red-600">Failed to load page {pageNum}</p>
                         </div>
                       }
                     />
