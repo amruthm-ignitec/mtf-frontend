@@ -7,7 +7,9 @@ interface StatusBadgeProps {
 }
 
 export default function StatusBadge({ status, className = '' }: StatusBadgeProps) {
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
     switch (status.toUpperCase()) {
       case 'COMPLETE':
         return 'bg-green-100 text-green-800';
@@ -19,6 +21,16 @@ export default function StatusBadge({ status, className = '' }: StatusBadgeProps
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (!status) {
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 ${className}`}
+      >
+        -
+      </span>
+    );
+  }
 
   return (
     <span

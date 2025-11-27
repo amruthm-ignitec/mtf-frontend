@@ -30,19 +30,19 @@ const ClinicalInformation = ({ donor }: { donor: DonorRecord }) => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium text-gray-500">Name</label>
-          <p className="text-sm text-gray-900">{donor.name}</p>
+          <p className="text-sm text-gray-900">{donor.name || '-'}</p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-500">Age</label>
-          <p className="text-sm text-gray-900">{donor.age || 'N/A'}</p>
+          <p className="text-sm text-gray-900">{donor.age || '-'}</p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-500">Gender</label>
-          <p className="text-sm text-gray-900">{donor.gender}</p>
+          <p className="text-sm text-gray-900">{donor.gender || '-'}</p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-500">Cause of Death</label>
-          <p className="text-sm text-gray-900">{donor.causeOfDeath || 'N/A'}</p>
+          <p className="text-sm text-gray-900">{donor.causeOfDeath || '-'}</p>
         </div>
       </div>
     </div>
@@ -306,7 +306,7 @@ export default function Summary() {
       initial_paperwork: extractionData.extracted_data ? {
         donor_login_packet: extractionData.extracted_data.donor_login_packet?.status || 'PENDING',
         donor_information: extractionData.extracted_data.donor_information?.status || 'PENDING',
-        drai: extractionData.extracted_data.drai?.status || 'PENDING',
+        drai: extractionData.extracted_data.donor_risk_assessment_interview?.status || extractionData.extracted_data.drai?.status || 'PENDING',
         physical_assessment: extractionData.extracted_data.physical_assessment?.status || 'PENDING',
         medical_records_review: extractionData.extracted_data.medical_records_review?.status || 'PENDING',
         tissue_recovery: extractionData.extracted_data.tissue_recovery?.status || 'PENDING',
@@ -346,7 +346,7 @@ export default function Summary() {
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <span className="flex items-center">
                         <User className="w-4 h-4 mr-1" />
-                        {donor.age} years • {donor.gender}
+                        {donor.age ? `${donor.age} years` : '-'} • {donor.gender || '-'}
                       </span>
                       <span>|</span>
                       <span className="flex items-center">
@@ -373,19 +373,19 @@ export default function Summary() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gray-50 p-2 rounded">
                           <div className="text-xs text-gray-500">Recovery Window</div>
-                          <div className="text-sm font-medium">{extractionData.recovery_information.recovery_window || 'N/A'}</div>
+                          <div className="text-sm font-medium">{extractionData.recovery_information?.recovery_window || '-'}</div>
                         </div>
-                        {extractionData.recovery_information.location && (
+                        {extractionData.recovery_information?.location && (
                           <div className="bg-green-50 p-2 rounded border border-green-200">
                             <div className="text-xs text-green-800">Location</div>
-                            <div className="text-sm font-medium text-green-900">{extractionData.recovery_information.location}</div>
+                            <div className="text-sm font-medium text-green-900">{extractionData.recovery_information.location || '-'}</div>
                           </div>
                         )}
                       </div>
-                      {extractionData.recovery_information.consent_status && (
+                      {extractionData.recovery_information?.consent_status && (
                         <div className="bg-green-50 p-2 rounded border border-green-200">
                           <div className="text-xs text-green-800">Consent Status</div>
-                          <div className="text-sm font-medium text-green-900">{extractionData.recovery_information.consent_status}</div>
+                          <div className="text-sm font-medium text-green-900">{extractionData.recovery_information.consent_status || '-'}</div>
                         </div>
                       )}
                     </div>
@@ -400,31 +400,31 @@ export default function Summary() {
                       Terminal Information
                     </h3>
                     <div className="space-y-3">
-                      {extractionData.terminal_information.cause_of_death && (
+                      {extractionData.terminal_information?.cause_of_death && (
                         <div className="bg-purple-50 p-2 rounded border border-purple-200">
                           <div className="text-xs text-purple-800">Cause of Death</div>
-                          <div className="text-sm font-medium text-purple-900">{extractionData.terminal_information.cause_of_death}</div>
+                          <div className="text-sm font-medium text-purple-900">{extractionData.terminal_information.cause_of_death || '-'}</div>
                         </div>
                       )}
                       <div className="grid grid-cols-2 gap-3">
                         <div className={`p-2 rounded border ${
-                          extractionData.terminal_information.hypotension === 'Present' 
+                          extractionData.terminal_information?.hypotension === 'Present' 
                             ? 'bg-red-50 border-red-200' 
                             : 'bg-green-50 border-green-200'
                         }`}>
-                          <div className={`text-xs ${extractionData.terminal_information.hypotension === 'Present' ? 'text-red-800' : 'text-green-800'}`}>Hypotension</div>
-                          <div className={`text-sm font-medium ${extractionData.terminal_information.hypotension === 'Present' ? 'text-red-900' : 'text-green-900'}`}>
-                            {extractionData.terminal_information.hypotension || 'None'}
+                          <div className={`text-xs ${extractionData.terminal_information?.hypotension === 'Present' ? 'text-red-800' : 'text-green-800'}`}>Hypotension</div>
+                          <div className={`text-sm font-medium ${extractionData.terminal_information?.hypotension === 'Present' ? 'text-red-900' : 'text-green-900'}`}>
+                            {extractionData.terminal_information?.hypotension || '-'}
                           </div>
                         </div>
                         <div className={`p-2 rounded border ${
-                          extractionData.terminal_information.sepsis === 'Present' 
+                          extractionData.terminal_information?.sepsis === 'Present' 
                             ? 'bg-red-50 border-red-200' 
                             : 'bg-green-50 border-green-200'
                         }`}>
-                          <div className={`text-xs ${extractionData.terminal_information.sepsis === 'Present' ? 'text-red-800' : 'text-green-800'}`}>Sepsis</div>
-                          <div className={`text-sm font-medium ${extractionData.terminal_information.sepsis === 'Present' ? 'text-red-900' : 'text-green-900'}`}>
-                            {extractionData.terminal_information.sepsis || 'None'}
+                          <div className={`text-xs ${extractionData.terminal_information?.sepsis === 'Present' ? 'text-red-800' : 'text-green-800'}`}>Sepsis</div>
+                          <div className={`text-sm font-medium ${extractionData.terminal_information?.sepsis === 'Present' ? 'text-red-900' : 'text-green-900'}`}>
+                            {extractionData.terminal_information?.sepsis || '-'}
                           </div>
                         </div>
                       </div>
@@ -648,49 +648,49 @@ export default function Summary() {
                   Key Medical Findings
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {extractionData.key_medical_findings.tissue_quality && (
+                  {extractionData.key_medical_findings?.tissue_quality && (
                     <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.tissue_quality.status === 'Good' 
+                      extractionData.key_medical_findings.tissue_quality?.status === 'Good' 
                         ? 'bg-green-50 border-green-100' 
-                        : extractionData.key_medical_findings.tissue_quality.status === 'Review Required'
+                        : extractionData.key_medical_findings.tissue_quality?.status === 'Review Required'
                         ? 'bg-yellow-50 border-yellow-100'
                         : 'bg-gray-50 border-gray-100'
                     }`}>
                       <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
                       <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.tissue_quality.description || 'Not available'}
+                        {extractionData.key_medical_findings.tissue_quality?.description || '-'}
                       </p>
                     </div>
                   )}
-                  {extractionData.key_medical_findings.bone_density && (
+                  {extractionData.key_medical_findings?.bone_density && (
                     <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.bone_density.status === 'Available' 
+                      extractionData.key_medical_findings.bone_density?.status === 'Available' 
                         ? 'bg-green-50 border-green-100' 
                         : 'bg-gray-50 border-gray-100'
                     }`}>
                       <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
                       <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.bone_density.description || 'Not available'}
+                        {extractionData.key_medical_findings.bone_density?.description || '-'}
                       </p>
                     </div>
                   )}
-                  {extractionData.key_medical_findings.cardiovascular_health && (
+                  {extractionData.key_medical_findings?.cardiovascular_health && (
                     <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.cardiovascular_health.status === 'No significant findings' 
+                      extractionData.key_medical_findings.cardiovascular_health?.status === 'No significant findings' 
                         ? 'bg-green-50 border-green-100' 
                         : 'bg-blue-50 border-blue-100'
                     }`}>
                       <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
                       <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.cardiovascular_health.description || 'Not available'}
+                        {extractionData.key_medical_findings.cardiovascular_health?.description || '-'}
                       </p>
                     </div>
                   )}
-                  {extractionData.key_medical_findings.medical_history && (
+                  {extractionData.key_medical_findings?.medical_history && (
                     <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                       <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
                       <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.medical_history.description || 'Not available'}
+                        {extractionData.key_medical_findings.medical_history?.description || '-'}
                       </p>
                     </div>
                   )}
@@ -784,9 +784,9 @@ export default function Summary() {
                             .slice(0, 6)
                             .map(([key, value]: [string, any]) => (
                               <div key={key} className="bg-gray-50 p-2 rounded">
-                                <div className="text-xs text-gray-500">{value.test_name || key}</div>
+                                <div className="text-xs text-gray-500">{value?.test_name || key || '-'}</div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {value.result}
+                                  {value?.result || '-'}
                                 </div>
                               </div>
                             ))}
@@ -811,15 +811,15 @@ export default function Summary() {
                     {extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(extractionData.serology_results.result).slice(0, 4).map(([testName, result]) => {
-                          const resultStr = String(result).toLowerCase();
+                          const resultStr = result ? String(result).toLowerCase() : '';
                           const isPositive = resultStr.includes('reactive') || resultStr.includes('positive');
                           return (
                             <div key={testName} className="bg-gray-50 p-2 rounded">
-                              <div className="text-xs text-gray-500">{testName}</div>
+                              <div className="text-xs text-gray-500">{testName || '-'}</div>
                               <div className={`text-sm font-medium ${
                                 isPositive ? 'text-yellow-600' : 'text-green-600'
                               }`}>
-                                {String(result)}
+                                {result ? String(result) : '-'}
                               </div>
                             </div>
                           );
@@ -836,18 +836,20 @@ export default function Summary() {
                     <h4 className="text-xs font-medium text-gray-500 mb-2">Culture Results</h4>
                     {extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
-                        {extractionData.culture_results.result.slice(0, 2).map((culture: any, idx: number) => (
-                          <div key={idx} className="bg-gray-50 p-2 rounded">
-                            <div className="text-xs text-gray-500">{culture.tissue_location || 'Culture'}</div>
-                            <div className={`text-sm font-medium ${
-                              culture.microorganism && culture.microorganism.toLowerCase() !== 'no growth' 
-                                ? 'text-red-600' 
-                                : 'text-green-600'
-                            }`}>
-                              {culture.microorganism || 'No Growth'}
+                        {extractionData.culture_results.result.slice(0, 2).map((culture: any, idx: number) => {
+                          const microorganism = culture?.microorganism || '';
+                          const hasGrowth = microorganism && microorganism.toLowerCase() !== 'no growth' && microorganism.toLowerCase() !== 'negative';
+                          return (
+                            <div key={idx} className="bg-gray-50 p-2 rounded">
+                              <div className="text-xs text-gray-500">{culture?.tissue_location || 'Culture'}</div>
+                              <div className={`text-sm font-medium ${
+                                hasGrowth ? 'text-red-600' : 'text-green-600'
+                              }`}>
+                                {microorganism || '-'}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-xs text-gray-500">No culture results available</p>
@@ -874,13 +876,13 @@ export default function Summary() {
                                 extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses.slice(0, 5).map((diag: string, idx: number) => (
                                   <li key={idx} className="flex items-start text-sm">
                                     <span className="text-gray-500 mr-2">•</span>
-                                    <span>{diag}</span>
+                                    <span>{diag || '-'}</span>
                                   </li>
                                 ))
                               ) : (
                                 <li className="flex items-start text-sm">
                                   <span className="text-gray-500 mr-2">•</span>
-                                  <span>{String(extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses)}</span>
+                                  <span>{extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses ? String(extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses) : '-'}</span>
                                 </li>
                               )}
                             </ul>
@@ -894,13 +896,13 @@ export default function Summary() {
                                 extractionData.extracted_data.medical_records_review_summary.summary.Procedures.slice(0, 3).map((proc: string, idx: number) => (
                                   <li key={idx} className="flex items-start text-sm">
                                     <span className="text-gray-500 mr-2">•</span>
-                                    <span>{proc}</span>
+                                    <span>{proc || '-'}</span>
                                   </li>
                                 ))
                               ) : (
                                 <li className="flex items-start text-sm">
                                   <span className="text-gray-500 mr-2">•</span>
-                                  <span>{String(extractionData.extracted_data.medical_records_review_summary.summary.Procedures)}</span>
+                                  <span>{extractionData.extracted_data.medical_records_review_summary.summary.Procedures ? String(extractionData.extracted_data.medical_records_review_summary.summary.Procedures) : '-'}</span>
                                 </li>
                               )}
                             </ul>
@@ -927,10 +929,10 @@ export default function Summary() {
                       <div className="bg-yellow-50 p-3 rounded">
                         <h4 className="text-xs font-medium text-yellow-800 mb-2">Risk Factors</h4>
                         <ul className="space-y-1 text-sm text-yellow-700">
-                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors).map(([key, value]) => (
+                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).map(([key, value]) => (
                             <li key={key} className="flex items-start">
                               <CheckCircle className="w-4 h-4 mr-1.5 text-green-500 mt-0.5" />
-                              <span>{key}: {String(value)}</span>
+                              <span>{key || '-'}: {value ? String(value) : '-'}</span>
                             </li>
                           ))}
                         </ul>
@@ -940,10 +942,10 @@ export default function Summary() {
                       <div className="bg-blue-50 p-3 rounded">
                         <h4 className="text-xs font-medium text-blue-800 mb-2">Social History</h4>
                         <ul className="space-y-1 text-sm text-blue-700">
-                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History).map(([key, value]) => (
+                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).map(([key, value]) => (
                             <li key={key} className="flex items-start">
                               <CheckCircle className="w-4 h-4 mr-1.5 text-green-500 mt-0.5" />
-                              <span>{key}: {String(value)}</span>
+                              <span>{key || '-'}: {value ? String(value) : '-'}</span>
                             </li>
                           ))}
                         </ul>
@@ -961,11 +963,11 @@ export default function Summary() {
                     Terminal Events & Medications
                   </h3>
                   <div className="space-y-4">
-                    {extractionData.terminal_information.cause_of_death && (
+                    {extractionData.terminal_information?.cause_of_death && (
                       <div>
                         <h4 className="text-xs font-medium text-gray-500 mb-2">Cause of Death Details</h4>
                         <div className="bg-gray-50 p-2 rounded">
-                          <p className="text-sm font-medium">{extractionData.terminal_information.cause_of_death}</p>
+                          <p className="text-sm font-medium">{extractionData.terminal_information.cause_of_death || '-'}</p>
                           {extractionData.processing_timestamp && (
                             <p className="text-xs text-gray-500 mt-1">
                               Processing Time: {new Date(extractionData.processing_timestamp).toLocaleString()}
@@ -978,31 +980,31 @@ export default function Summary() {
                       <h4 className="text-xs font-medium text-gray-500 mb-2">Terminal Course</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div className={`p-2 rounded ${
-                          extractionData.terminal_information.hypotension === 'Present' 
+                          extractionData.terminal_information?.hypotension === 'Present' 
                             ? 'bg-red-50' 
                             : 'bg-gray-50'
                         }`}>
                           <div className="text-xs text-gray-500">Hypotension</div>
                           <div className={`text-sm font-medium ${
-                            extractionData.terminal_information.hypotension === 'Present' 
+                            extractionData.terminal_information?.hypotension === 'Present' 
                               ? 'text-red-600' 
                               : 'text-green-600'
                           }`}>
-                            {extractionData.terminal_information.hypotension || 'None'}
+                            {extractionData.terminal_information?.hypotension || '-'}
                           </div>
                         </div>
                         <div className={`p-2 rounded ${
-                          extractionData.terminal_information.sepsis === 'Present' 
+                          extractionData.terminal_information?.sepsis === 'Present' 
                             ? 'bg-red-50' 
                             : 'bg-gray-50'
                         }`}>
                           <div className="text-xs text-gray-500">Sepsis</div>
                           <div className={`text-sm font-medium ${
-                            extractionData.terminal_information.sepsis === 'Present' 
+                            extractionData.terminal_information?.sepsis === 'Present' 
                               ? 'text-red-600' 
                               : 'text-green-600'
                           }`}>
-                            {extractionData.terminal_information.sepsis || 'None'}
+                            {extractionData.terminal_information?.sepsis || '-'}
                           </div>
                         </div>
                       </div>
@@ -1014,11 +1016,11 @@ export default function Summary() {
                           {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Medications) ? (
                             <ul className="space-y-1">
                               {extractionData.extracted_data.medical_records_review_summary.summary.Medications.slice(0, 3).map((med: string, idx: number) => (
-                                <li key={idx} className="text-xs text-gray-700">• {med}</li>
+                                <li key={idx} className="text-xs text-gray-700">• {med || '-'}</li>
                               ))}
                             </ul>
                           ) : (
-                            <p className="text-xs text-gray-700">{String(extractionData.extracted_data.medical_records_review_summary.summary.Medications)}</p>
+                            <p className="text-xs text-gray-700">{extractionData.extracted_data.medical_records_review_summary.summary.Medications ? String(extractionData.extracted_data.medical_records_review_summary.summary.Medications) : '-'}</p>
                           )}
                         </div>
                       </div>
@@ -1052,14 +1054,16 @@ export default function Summary() {
         return <AuthorizationSection data={extractionData.extracted_data.authorization} onCitationClick={handleCitationClick} />;
 
       case 'drai':
-        if (!extractionData?.extracted_data?.drai) {
+        if (!extractionData?.extracted_data?.donor_risk_assessment_interview && !extractionData?.extracted_data?.drai) {
           return (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-500">DRAI data not available.</p>
                     </div>
           );
         }
-        return <DRAISection data={extractionData.extracted_data.drai} onCitationClick={handleCitationClick} />;
+        // Try both keys - backend uses donor_risk_assessment_interview, types use drai
+        const draiData = extractionData.extracted_data.donor_risk_assessment_interview || extractionData.extracted_data.drai;
+        return <DRAISection data={draiData} onCitationClick={handleCitationClick} />;
 
       case 'infectious-disease':
         if (!extractionData?.extracted_data?.infectious_disease_testing) {
