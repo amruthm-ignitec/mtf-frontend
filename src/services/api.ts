@@ -163,6 +163,16 @@ class ApiService {
     return this.request<{ sas_url: string; expiry_minutes: number; original_filename: string }>(`/documents/${documentId}/sas-url?expiry_minutes=${expiryMinutes}`);
   }
 
+  /**
+   * Get the proxied PDF URL for a document.
+   * This endpoint streams the PDF from Azure Blob Storage with proper CORS headers,
+   * avoiding CORS issues when loading in PDF.js.
+   */
+  getDocumentPdfUrl(documentId: number): string {
+    const token = localStorage.getItem('authToken');
+    return `${this.baseURL}/documents/${documentId}/pdf`;
+  }
+
   async deleteDocument(documentId: number): Promise<void> {
     return this.request<void>(`/documents/${documentId}`, {
       method: 'DELETE',

@@ -1141,21 +1141,19 @@ export default function Summary() {
 
   // Handle citation click
   const handleCitationClick = async (sourceDocument: string, pageNumber?: number, documentId?: number) => {
-    // If document_id is provided, generate SAS URL for secure access
+    // If document_id is provided, use proxied PDF endpoint (avoids CORS issues)
     if (documentId) {
       const document = documents.find(doc => doc.id === documentId);
       if (document) {
         try {
-          // Generate SAS URL (valid for 30 minutes)
-          const sasResponse = await apiService.getDocumentSasUrl(documentId, 30);
-          if (sasResponse && sasResponse.sas_url) {
-            setSelectedPdfUrl(sasResponse.sas_url);
-            setSelectedPageNumber(pageNumber || undefined);
-            setSelectedDocumentName(sasResponse.original_filename || document.original_filename || document.filename || sourceDocument);
-            return;
-          }
+          // Use proxied PDF endpoint that streams with proper CORS headers
+          const pdfUrl = apiService.getDocumentPdfUrl(documentId);
+          setSelectedPdfUrl(pdfUrl);
+          setSelectedPageNumber(pageNumber || undefined);
+          setSelectedDocumentName(document.original_filename || document.filename || sourceDocument);
+          return;
         } catch (error) {
-          console.error('Error generating SAS URL:', error);
+          console.error('Error getting PDF URL:', error);
           // Fall through to fallback behavior
         }
       }
@@ -1171,16 +1169,14 @@ export default function Summary() {
       
       if (matchedDocument) {
         try {
-          // Try to generate SAS URL for matched document
-          const sasResponse = await apiService.getDocumentSasUrl(matchedDocument.id, 30);
-          if (sasResponse && sasResponse.sas_url) {
-            setSelectedPdfUrl(sasResponse.sas_url);
-            setSelectedPageNumber(pageNumber || undefined);
-            setSelectedDocumentName(sasResponse.original_filename || matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
-            return;
-          }
+          // Use proxied PDF endpoint for matched document
+          const pdfUrl = apiService.getDocumentPdfUrl(matchedDocument.id);
+          setSelectedPdfUrl(pdfUrl);
+          setSelectedPageNumber(pageNumber || undefined);
+          setSelectedDocumentName(matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
+          return;
         } catch (error) {
-          console.error('Error generating SAS URL for matched document:', error);
+          console.error('Error getting PDF URL for matched document:', error);
           // Fall through to final fallback
         }
       }

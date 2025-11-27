@@ -94,7 +94,9 @@ export default function PDFViewerWithPage({
               options={{
                 cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
                 cMapPacked: true,
-                httpHeaders: {},
+                httpHeaders: {
+                  'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+                },
               }}
             >
               {pagesToRender.map((pageNum) => {
