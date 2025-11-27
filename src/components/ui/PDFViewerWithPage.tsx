@@ -3,12 +3,11 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Set up PDF.js worker - use jsdelivr CDN for reliable worker loading
-// Using explicit version to match installed package (5.4.394)
+// Set up PDF.js worker - use cdnjs which is recommended by react-pdf
+// This automatically matches the pdfjs version that react-pdf is using
 if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  // Use jsdelivr CDN which is more reliable than unpkg for workers
-  // Using .min.js instead of .mjs for better compatibility
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.js`;
+  // Use cdnjs CDN with version from pdfjs - this ensures compatibility
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 }
 
 interface PDFViewerWithPageProps {
@@ -104,13 +103,13 @@ export default function PDFViewerWithPage({
                 </div>
               }
               options={{
-                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/cmaps/',
+                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/cmaps/',
                 cMapPacked: true,
                 httpHeaders: {
                   'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
                 },
                 withCredentials: false,
-                standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/standard_fonts/',
+                standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/standard_fonts/',
               }}
             >
               {loading && numPages === null ? null : pagesToRender.map((pageNum) => {
