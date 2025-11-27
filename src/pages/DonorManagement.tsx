@@ -23,7 +23,7 @@ interface DonorWithDetails extends Donor {
       pageNumber: string;
       confidence: number;
     };
-  }>;
+  }> | null;
   rejectionReason?: string;
   requiredDocuments?: Array<{
     id: string;
@@ -187,8 +187,8 @@ export default function DonorManagement() {
 
   const hasCriticalFindingsData = (donor: DonorWithDetails): boolean => {
     // Returns true if we have critical findings data (even if empty array)
-    // Returns false if data is not available yet (undefined)
-    return donor.criticalFindings !== undefined;
+    // Returns false if data is not available yet (undefined or null)
+    return donor.criticalFindings !== undefined && donor.criticalFindings !== null;
   };
 
   const getDocumentStatusBadge = (status: string) => {
