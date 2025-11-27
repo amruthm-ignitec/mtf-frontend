@@ -27,6 +27,38 @@ export default function PhysicalAssessmentSection({
     return { icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' };
   };
 
+  // Helper function to format value for display
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined) {
+      return '-';
+    }
+    
+    // If it's already a string or number, return as is
+    if (typeof value === 'string' || typeof value === 'number') {
+      return String(value);
+    }
+    
+    // If it's an array, join with commas or format each item
+    if (Array.isArray(value)) {
+      return value.map(item => formatValue(item)).join(', ');
+    }
+    
+    // If it's an object, format it nicely
+    if (typeof value === 'object') {
+      const entries = Object.entries(value)
+        .filter(([_, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => {
+          const formattedKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const formattedValue = formatValue(v);
+          return `${formattedKey}: ${formattedValue}`;
+        });
+      
+      return entries.length > 0 ? entries.join('; ') : '-';
+    }
+    
+    return String(value);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -49,14 +81,19 @@ export default function PhysicalAssessmentSection({
             <h3 className="text-lg font-semibold text-gray-900">Summary</h3>
           </div>
           <div className="space-y-4">
-            {Object.entries(summary).map(([key, value]) => (
-              value && (
+            {Object.entries(summary).map(([key, value]) => {
+              const formattedValue = formatValue(value);
+              if (!formattedValue || formattedValue === '-') return null;
+              
+              return (
                 <div key={key}>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">{key}</label>
-                  <p className="text-sm text-gray-900">{String(value)}</p>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </label>
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{formattedValue}</p>
                 </div>
-              )
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
@@ -105,7 +142,9 @@ export default function PhysicalAssessmentSection({
               
               if (!value) return null;
               
-              const valueStr = String(value);
+              const valueStr = formatValue(value);
+              if (valueStr === '-') return null;
+              
               const status = getFindingStatus(valueStr);
               const StatusIcon = status.icon;
               
@@ -117,8 +156,10 @@ export default function PhysicalAssessmentSection({
                   <div className="flex items-start space-x-2">
                     <StatusIcon className={`w-4 h-4 mt-0.5 ${status.color}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-700 mb-1">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-gray-900 break-words">{valueStr}</p>
+                      <p className="text-xs font-medium text-gray-700 mb-1">
+                        {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </p>
+                      <p className="text-sm text-gray-900 break-words whitespace-pre-wrap">{valueStr}</p>
                     </div>
                   </div>
                 </div>
