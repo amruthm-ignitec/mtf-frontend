@@ -78,7 +78,7 @@ const mockTissueEligibility: TissueEligibility[] = [
   },
   {
     id: 'skin1',
-    name: 'Skin Graft',
+    name: 'Skin & Soft Tissue',
     category: 'Integumentary',
     status: 'Review Required',
     confidenceScore: 74,

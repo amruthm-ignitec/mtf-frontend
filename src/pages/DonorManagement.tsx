@@ -12,6 +12,7 @@ import DonorCreateForm from '../components/donor/DonorCreateForm';
 import { useNavigate } from 'react-router-dom';
 
 interface DonorWithDetails extends Donor {
+  hasDocuments?: boolean; // Track if donor has any documents uploaded
   criticalFindings?: Array<{
     type: string;
     severity: string;
@@ -41,7 +42,7 @@ interface DonorWithDetails extends Donor {
 
 export default function DonorManagement() {
   const navigate = useNavigate();
-  const { donors, loading, error, deleteDonor, togglePriority } = useDonors();
+  const { donors, loading, error, deleteDonor, togglePriority, fetchDonors } = useDonors();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState<'all' | 'priority' | 'normal'>('all');
@@ -50,6 +51,8 @@ export default function DonorManagement() {
 
   const handleDonorCreated = async () => {
     setShowCreateForm(false);
+    // Refresh the donor list to show the newly created donor
+    await fetchDonors();
   };
 
   const handleDeleteDonor = async (donorId: number) => {
@@ -73,6 +76,7 @@ export default function DonorManagement() {
   };
 
   // Fetch donor details with critical findings and missing documents
+  // Also check which donors have documents uploaded
   useEffect(() => {
     const fetchDonorDetails = async () => {
       if (donors.length === 0) return;
@@ -81,6 +85,27 @@ export default function DonorManagement() {
         setLoadingDetails(true);
         const apiUrl = import.meta.env.VITE_API_BASE_URL;
         const token = localStorage.getItem('authToken');
+        
+        // Check which donors have documents uploaded
+        const donorsWithDocs = new Set<number>();
+        await Promise.all(donors.map(async (donor) => {
+          try {
+            const docsResponse = await fetch(`${apiUrl}/documents/donor/${donor.id}`, {
+              headers: {
+                ...(token && { Authorization: `Bearer ${token}` }),
+              },
+            });
+            if (docsResponse.ok) {
+              const docs = await docsResponse.json();
+              if (docs && Array.isArray(docs) && docs.length > 0) {
+                donorsWithDocs.add(donor.id);
+              }
+            }
+          } catch (err) {
+            // Silently fail - donor might not have documents yet
+          }
+        }));
+        
         const response = await fetch(`${apiUrl}/donors/queue/details`, {
           headers: {
             ...(token && { Authorization: `Bearer ${token}` }),
@@ -89,111 +114,64 @@ export default function DonorManagement() {
         
         if (response.ok) {
           const detailsData = await response.json();
-          // Merge details with donors
+          // Merge details with donors - only add details if donor has documents
           const merged = donors.map(donor => {
             const details = detailsData.find((d: any) => d.id === String(donor.id) || d.id === donor.id);
-            if (details) {
+            const hasDocuments = donorsWithDocs.has(donor.id);
+            
+            if (details && hasDocuments) {
+              // Donor has documents and details from API
               return {
                 ...donor,
                 ...details,
                 id: donor.id, // Keep original id type
+                hasDocuments: true,
               };
-            } else {
-              // If no details found, add dummy data for this donor
-              // For latest donor, show processing status to demonstrate queue message
-              const isLatest = donor.id === Math.max(...donors.map(d => d.id));
+            } else if (hasDocuments) {
+              // Donor has documents but no details from queue API - use basic structure
               return {
                 ...donor,
-                criticalFindings: donor.id % 3 === 1 ? [{
-                  type: "HIV",
-                  severity: "CRITICAL",
-                  automaticRejection: true,
-                  detectedAt: donor.created_at,
-                  source: {
-                    documentId: "doc1",
-                    pageNumber: "3",
-                    confidence: 0.98
-                  }
-                }] : undefined,
-                rejectionReason: donor.id % 3 === 1 ? "Critical Finding: HIV Positive" : undefined,
-                requiredDocuments: [
-                  { id: `rd-${donor.id}-1`, name: "Medical History", type: "medical_history", label: "Medical History", status: isLatest ? "processing" : (donor.id % 2 === 0 ? "missing" : "processing"), isRequired: true, pageCount: 0 },
-                  { id: `rd-${donor.id}-2`, name: "Serology Report", type: "serology_report", label: "Serology Report", status: isLatest ? "processing" : (donor.id % 2 === 0 ? "missing" : "completed"), isRequired: true, pageCount: 0 },
-                  { id: `rd-${donor.id}-3`, name: "Laboratory Results", type: "lab_results", label: "Laboratory Results", status: isLatest ? "processing" : "completed", isRequired: true, pageCount: 0 },
-                  { id: `rd-${donor.id}-4`, name: "Recovery Cultures", type: "recovery_cultures", label: "Recovery Cultures", status: "completed", isRequired: true, pageCount: 0 },
-                  { id: `rd-${donor.id}-5`, name: "Consent Form", type: "consent_form", label: "Consent Form", status: "completed", isRequired: true, pageCount: 0 },
-                  { id: `rd-${donor.id}-6`, name: "Death Certificate", type: "death_certificate", label: "Death Certificate", status: "completed", isRequired: true, pageCount: 0 },
-                ],
-                processingStatus: isLatest ? "processing" : (donor.id % 3 === 1 ? "rejected" : "processing")
+                hasDocuments: true,
+                criticalFindings: undefined,
+                requiredDocuments: undefined,
+                processingStatus: undefined,
+              };
+            } else {
+              // Donor has no documents - don't show critical findings or missing documents
+              return {
+                ...donor,
+                hasDocuments: false,
+                criticalFindings: undefined,
+                requiredDocuments: undefined,
+                processingStatus: undefined,
               };
             }
           });
           setDonorsWithDetails(merged);
         } else {
-          // If API fails, add dummy data for all donors
-          // For latest donor, show processing status to demonstrate queue message
-          const maxId = Math.max(...donors.map(d => d.id));
+          // If API fails, only add document status, no dummy data
           const merged = donors.map(donor => {
-            const isLatest = donor.id === maxId;
+            const hasDocuments = donorsWithDocs.has(donor.id);
             return {
               ...donor,
-              criticalFindings: donor.id % 3 === 1 ? [{
-                type: "HIV",
-                severity: "CRITICAL",
-                automaticRejection: true,
-                detectedAt: donor.created_at,
-                source: {
-                  documentId: "doc1",
-                  pageNumber: "3",
-                  confidence: 0.98
-                }
-              }] : undefined,
-              rejectionReason: donor.id % 3 === 1 ? "Critical Finding: HIV Positive" : undefined,
-              requiredDocuments: [
-                { id: `rd-${donor.id}-1`, name: "Medical History", type: "medical_history", label: "Medical History", status: isLatest ? "processing" : (donor.id % 2 === 0 ? "missing" : "processing"), isRequired: true, pageCount: 0 },
-                { id: `rd-${donor.id}-2`, name: "Serology Report", type: "serology_report", label: "Serology Report", status: isLatest ? "processing" : (donor.id % 2 === 0 ? "missing" : "completed"), isRequired: true, pageCount: 0 },
-                { id: `rd-${donor.id}-3`, name: "Laboratory Results", type: "lab_results", label: "Laboratory Results", status: isLatest ? "processing" : "completed", isRequired: true, pageCount: 0 },
-                { id: `rd-${donor.id}-4`, name: "Recovery Cultures", type: "recovery_cultures", label: "Recovery Cultures", status: "completed", isRequired: true, pageCount: 0 },
-                { id: `rd-${donor.id}-5`, name: "Consent Form", type: "consent_form", label: "Consent Form", status: "completed", isRequired: true, pageCount: 0 },
-                { id: `rd-${donor.id}-6`, name: "Death Certificate", type: "death_certificate", label: "Death Certificate", status: "completed", isRequired: true, pageCount: 0 },
-              ],
-              processingStatus: isLatest ? "processing" : (donor.id % 3 === 1 ? "rejected" : "processing")
+              hasDocuments,
+              criticalFindings: undefined,
+              requiredDocuments: undefined,
+              processingStatus: undefined,
             };
           });
           setDonorsWithDetails(merged);
         }
       } catch (err) {
         console.error('Failed to fetch donor details:', err);
-        // Fallback to dummy data for all donors if API fails
-        // For latest donor, show processing status to demonstrate queue message
-        const maxId = Math.max(...donors.map(d => d.id));
-        const merged = donors.map(donor => {
-          const isLatest = donor.id === maxId;
-          return {
-            ...donor,
-            criticalFindings: donor.id % 3 === 1 ? [{
-              type: "HIV",
-              severity: "CRITICAL",
-              automaticRejection: true,
-              detectedAt: donor.created_at,
-              source: {
-                documentId: "doc1",
-                pageNumber: "3",
-                confidence: 0.98
-              }
-            }] : undefined,
-            rejectionReason: donor.id % 3 === 1 ? "Critical Finding: HIV Positive" : undefined,
-            requiredDocuments: [
-              { id: `rd-${donor.id}-1`, name: "Medical History", type: "medical_history", label: "Medical History", status: isLatest ? "processing" : (donor.id % 2 === 0 ? "missing" : "processing"), isRequired: true, pageCount: 0 },
-              { id: `rd-${donor.id}-2`, name: "Serology Report", type: "serology_report", label: "Serology Report", status: isLatest ? "processing" : (donor.id % 2 === 0 ? "missing" : "completed"), isRequired: true, pageCount: 0 },
-              { id: `rd-${donor.id}-3`, name: "Laboratory Results", type: "lab_results", label: "Laboratory Results", status: isLatest ? "processing" : "completed", isRequired: true, pageCount: 0 },
-              { id: `rd-${donor.id}-4`, name: "Recovery Cultures", type: "recovery_cultures", label: "Recovery Cultures", status: "completed", isRequired: true, pageCount: 0 },
-              { id: `rd-${donor.id}-5`, name: "Consent Form", type: "consent_form", label: "Consent Form", status: "completed", isRequired: true, pageCount: 0 },
-              { id: `rd-${donor.id}-6`, name: "Death Certificate", type: "death_certificate", label: "Death Certificate", status: "completed", isRequired: true, pageCount: 0 },
-            ],
-            processingStatus: isLatest ? "processing" : (donor.id % 3 === 1 ? "rejected" : "processing")
-          };
-        });
+        // On error, just mark donors without document info
+        const merged = donors.map(donor => ({
+          ...donor,
+          hasDocuments: false,
+          criticalFindings: undefined,
+          requiredDocuments: undefined,
+          processingStatus: undefined,
+        }));
         setDonorsWithDetails(merged);
       } finally {
         setLoadingDetails(false);
@@ -205,6 +183,12 @@ export default function DonorManagement() {
 
   const hasCriticalFindings = (donor: DonorWithDetails): boolean => {
     return Boolean(donor.criticalFindings && donor.criticalFindings.length > 0);
+  };
+
+  const hasCriticalFindingsData = (donor: DonorWithDetails): boolean => {
+    // Returns true if we have critical findings data (even if empty array)
+    // Returns false if data is not available yet (undefined)
+    return donor.criticalFindings !== undefined;
   };
 
   const getDocumentStatusBadge = (status: string) => {
@@ -236,22 +220,25 @@ export default function DonorManagement() {
       return matchesSearch && matchesFilter;
     });
     
-    // Find the latest donor (most recently created)
-    if (filtered.length > 0) {
-      const latestDonor = filtered.reduce((latest, current) => {
-        const latestDate = new Date(latest.created_at || 0).getTime();
-        const currentDate = new Date(current.created_at || 0).getTime();
-        return currentDate > latestDate ? current : latest;
-      });
+    // Sort by created_at in descending order (newest first)
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    // Find the latest donor (most recently created) - first item after sorting
+    if (sorted.length > 0) {
+      const latestDonor = sorted[0];
       
       // Mark latest donor for status override
-      return filtered.map(donor => ({
+      return sorted.map(donor => ({
         ...donor,
         isLatestDonor: donor.id === latestDonor.id
       }));
     }
     
-    return filtered;
+    return sorted;
   }, [donors, donorsWithDetails, searchTerm, filterPriority]);
 
   const getAgeDisplay = (donor: Donor) => {
@@ -338,30 +325,54 @@ export default function DonorManagement() {
     {
       key: 'critical_findings',
       title: 'Critical Findings',
-      render: (donor: DonorWithDetails) => (
-        <div className="space-y-2 min-w-[200px]">
-          {hasCriticalFindings(donor) ? (
-            <>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Critical Finding
-              </span>
-              {donor.rejectionReason && (
-                <div className="text-xs text-red-600 mt-1">
-                  {donor.rejectionReason}
-                </div>
-              )}
-            </>
-          ) : (
-            <span className="text-xs text-gray-400">No critical findings</span>
-          )}
-        </div>
-      )
+      render: (donor: DonorWithDetails) => {
+        // Only show if donor has documents uploaded
+        if (!donor.hasDocuments) {
+          return <span className="text-xs text-gray-400">—</span>;
+        }
+        
+        // Check if we have critical findings data available
+        if (!hasCriticalFindingsData(donor)) {
+          // Data not available yet - might still be processing
+          return (
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-xs text-gray-400">Processing...</span>
+            </div>
+          );
+        }
+        
+        // Data is available - check if there are critical findings
+        return (
+          <div className="space-y-2 min-w-[200px]">
+            {hasCriticalFindings(donor) ? (
+              <>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Critical Finding
+                </span>
+                {donor.rejectionReason && (
+                  <div className="text-xs text-red-600 mt-1">
+                    {donor.rejectionReason}
+                  </div>
+                )}
+              </>
+            ) : (
+              <span className="text-xs text-gray-400">No critical findings</span>
+            )}
+          </div>
+        );
+      }
     },
     {
       key: 'missing_documents',
       title: 'Missing Documents',
       render: (donor: DonorWithDetails) => {
+        // Only show if donor has documents uploaded
+        if (!donor.hasDocuments) {
+          return <span className="text-xs text-gray-400">—</span>;
+        }
+        
         // Check if documents are still processing (has processing status and no completed documents yet)
         const hasProcessingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'processing');
         const hasCompletedDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'completed');
@@ -416,6 +427,11 @@ export default function DonorManagement() {
       key: 'status',
       title: 'Status',
       render: (donor: DonorWithDetails & { isLatestDonor?: boolean }) => {
+        // Only show if donor has documents uploaded
+        if (!donor.hasDocuments) {
+          return <span className="text-xs text-gray-400">—</span>;
+        }
+        
         // Always show "completed" for the latest donor
         let status: string;
         if (donor.isLatestDonor) {
