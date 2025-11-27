@@ -764,23 +764,27 @@ export default function Summary() {
                   {extractionData?.extracted_data?.infectious_disease_testing ? (
                     <div>
                       <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
-                      <div className="mb-2">
-                        <p className="text-xs text-gray-600">
-                          Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
-                        </p>
-                      </div>
+                      {extractionData.extracted_data.infectious_disease_testing.serology_report?.report_type && (
+                        <div className="mb-2">
+                          <p className="text-xs text-gray-600">
+                            Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
+                          </p>
+                        </div>
+                      )}
                       {extractionData.extracted_data.infectious_disease_testing.other_tests && (
                         <div className="grid grid-cols-2 gap-3">
                           {Object.entries(extractionData.extracted_data.infectious_disease_testing.other_tests)
                             .filter(([key, value]) => 
                               value && 
+                              typeof value === 'object' &&
+                              'result' in value && 
                               value.result && 
                               (key.includes('sample') || key.includes('report') || key.includes('laboratory'))
                             )
                             .slice(0, 6)
-                            .map(([key, value]) => (
+                            .map(([key, value]: [string, any]) => (
                               <div key={key} className="bg-gray-50 p-2 rounded">
-                                <div className="text-xs text-gray-500">{value.test_name}</div>
+                                <div className="text-xs text-gray-500">{value.test_name || key}</div>
                                 <div className="text-sm font-medium text-gray-900">
                                   {value.result}
                                 </div>
