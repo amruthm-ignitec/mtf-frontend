@@ -2,10 +2,16 @@
 
 export type Status = 'COMPLETE' | 'INCOMPLETE' | 'PENDING';
 
+export interface Citation {
+  document_id: number;
+  page: number;
+}
+
 export interface SourceDocument {
   filename: string;
   page?: number;
   confidence: number;
+  document_id?: number;
 }
 
 export interface SourceDocumentReference {
@@ -13,6 +19,7 @@ export interface SourceDocumentReference {
   source_page?: number;
   source_pages?: number[];
   confidence?: number;
+  document_id?: number;
 }
 
 // Donor Login Packet

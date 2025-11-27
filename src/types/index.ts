@@ -11,6 +11,7 @@ export interface FindingCitation {
   id: string;
   pageNumber: string;
   context: string;
+  documentId?: number;
 }
 
 export interface FindingSummary {

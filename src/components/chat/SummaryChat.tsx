@@ -25,9 +25,10 @@ declare global {
 interface SummaryChatProps {
   donorId: string;
   donorName?: string; // Add donor name prop
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function SummaryChat({ donorName }: SummaryChatProps) {
+export default function SummaryChat({ donorName, onCitationClick }: SummaryChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -223,18 +224,25 @@ export default function SummaryChat({ donorName }: SummaryChatProps) {
                   {/* Citations */}
                   {message.citations && (
                     <div className="mt-2 space-y-2">
-                      {message.citations.map((citation, index) => (
-                        <button
-                          key={index}
-                          className="flex items-center text-xs bg-white bg-opacity-10 rounded p-2 hover:bg-opacity-20"
-                          onClick={() => {
-                            // Handle citation click - open document viewer
-                          }}
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          <span>Page {citation.pageNumber}: {citation.context}</span>
-                        </button>
-                      ))}
+                      {message.citations.map((citation, index) => {
+                        const documentId = typeof citation.documentId === 'string' 
+                          ? parseInt(citation.documentId, 10) 
+                          : citation.documentId;
+                        return (
+                          <button
+                            key={index}
+                            className="flex items-center text-xs bg-white bg-opacity-10 rounded p-2 hover:bg-opacity-20"
+                            onClick={() => {
+                              if (onCitationClick) {
+                                onCitationClick('Chat Citation', citation.pageNumber, documentId);
+                              }
+                            }}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            <span>Page {citation.pageNumber}: {citation.context}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

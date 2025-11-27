@@ -1139,8 +1139,35 @@ export default function Summary() {
   };
 
   // Handle citation click
-  const handleCitationClick = (sourceDocument: string, pageNumber?: number) => {
-    // Always use the local chart review PDF document
+  const handleCitationClick = (sourceDocument: string, pageNumber?: number, documentId?: number) => {
+    // If document_id is provided, look up the document from the documents array
+    if (documentId) {
+      const document = documents.find(doc => doc.id === documentId);
+      if (document && document.azure_blob_url) {
+        setSelectedPdfUrl(document.azure_blob_url);
+        setSelectedPageNumber(pageNumber || undefined);
+        setSelectedDocumentName(document.original_filename || document.filename || sourceDocument);
+        return;
+      }
+    }
+    
+    // Fallback: Try to match by source_document name (backward compatibility)
+    if (sourceDocument) {
+      const matchedDocument = documents.find(doc => {
+        const originalName = doc.original_filename?.toLowerCase() || '';
+        const sourceName = sourceDocument.toLowerCase();
+        return originalName.includes(sourceName) || sourceName.includes(originalName);
+      });
+      
+      if (matchedDocument && matchedDocument.azure_blob_url) {
+        setSelectedPdfUrl(matchedDocument.azure_blob_url);
+        setSelectedPageNumber(pageNumber || undefined);
+        setSelectedDocumentName(matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
+        return;
+      }
+    }
+    
+    // Final fallback: Use local PDF (for old data or missing documents)
     const localPdfUrl = '/chart-review-document.pdf';
     setSelectedPdfUrl(localPdfUrl);
     setSelectedPageNumber(pageNumber || undefined);
@@ -1279,6 +1306,7 @@ export default function Summary() {
           finding={selectedFinding}
           isOpen={!!selectedFinding}
           onClose={() => setSelectedFinding(null)}
+          onCitationClick={handleCitationClick}
         />
       )}
 

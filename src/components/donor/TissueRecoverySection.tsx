@@ -6,7 +6,7 @@ import Card from '../ui/Card';
 interface TissueRecoverySectionProps {
   data?: TissueRecovery | any;
   eligibilityData?: any[];
-  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function TissueRecoverySection({ data, eligibilityData, onCitationClick }: TissueRecoverySectionProps) {
@@ -66,15 +66,23 @@ export default function TissueRecoverySection({ data, eligibilityData, onCitatio
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Source Pages</h4>
                 <div className="flex flex-wrap gap-2">
-                  {data.pages.map((page: number, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => onCitationClick?.('Tissue Recovery Information', page)}
-                      className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
-                    >
-                      Page {page}
-                    </button>
-                  ))}
+                  {data.pages.map((citation: any, idx: number) => {
+                    const page = typeof citation === 'object' && citation !== null && 'page' in citation
+                      ? citation.page
+                      : (typeof citation === 'number' ? citation : parseInt(String(citation), 10) || 1);
+                    const documentId = typeof citation === 'object' && citation !== null && 'document_id' in citation
+                      ? citation.document_id
+                      : undefined;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => onCitationClick?.('Tissue Recovery Information', page, documentId)}
+                        className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
+                      >
+                        Page {page}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

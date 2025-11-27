@@ -7,7 +7,7 @@ import Card from '../ui/Card';
 
 interface ConditionalDocumentsSectionProps {
   data: ConditionalDocuments;
-  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function ConditionalDocumentsSection({
@@ -79,15 +79,25 @@ export default function ConditionalDocumentsSection({
                 <p className="text-xs text-gray-600">CLIA: {bioburden_results.laboratory_information.clia}</p>
               </div>
             )}
-            {bioburden_results.source_document && bioburden_results.source_pages && bioburden_results.source_pages.length > 0 && (
-              <div className="mt-4">
-                <CitationBadge
-                  pageNumber={bioburden_results.source_pages[0]}
-                  documentName={bioburden_results.source_document}
-                  onClick={() => onCitationClick?.(bioburden_results.source_document, bioburden_results.source_pages?.[0])}
-                />
-              </div>
-            )}
+            {bioburden_results.source_document && bioburden_results.source_pages && bioburden_results.source_pages.length > 0 && (() => {
+              const firstPage = bioburden_results.source_pages[0];
+              const page = typeof firstPage === 'object' && firstPage !== null && 'page' in firstPage
+                ? firstPage.page
+                : (typeof firstPage === 'number' ? firstPage : parseInt(String(firstPage), 10) || 1);
+              const documentId = typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
+                ? firstPage.document_id
+                : (bioburden_results as any).document_id;
+              return (
+                <div className="mt-4">
+                  <CitationBadge
+                    pageNumber={page}
+                    documentName={bioburden_results.source_document}
+                    documentId={documentId}
+                    onClick={() => onCitationClick?.(bioburden_results.source_document, page, documentId)}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </Card>
       )}
@@ -119,15 +129,25 @@ export default function ConditionalDocumentsSection({
                 {toxicology_report.toxicology_screening_status.performed ? 'Performed' : 'Not Performed'}
               </p>
             </div>
-            {toxicology_report.source_document && toxicology_report.source_pages && toxicology_report.source_pages.length > 0 && (
-              <div className="mt-4">
-                <CitationBadge
-                  pageNumber={toxicology_report.source_pages[0]}
-                  documentName={toxicology_report.source_document}
-                  onClick={() => onCitationClick?.(toxicology_report.source_document, toxicology_report.source_pages?.[0])}
-                />
-              </div>
-            )}
+            {toxicology_report.source_document && toxicology_report.source_pages && toxicology_report.source_pages.length > 0 && (() => {
+              const firstPage = toxicology_report.source_pages[0];
+              const page = typeof firstPage === 'object' && firstPage !== null && 'page' in firstPage
+                ? firstPage.page
+                : (typeof firstPage === 'number' ? firstPage : parseInt(String(firstPage), 10) || 1);
+              const documentId = typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
+                ? firstPage.document_id
+                : (toxicology_report as any).document_id;
+              return (
+                <div className="mt-4">
+                  <CitationBadge
+                    pageNumber={page}
+                    documentName={toxicology_report.source_document}
+                    documentId={documentId}
+                    onClick={() => onCitationClick?.(toxicology_report.source_document, page, documentId)}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </Card>
       )}
@@ -181,15 +201,25 @@ export default function ConditionalDocumentsSection({
                 ))}
               </div>
             )}
-            {autopsy_report.source_document && autopsy_report.source_pages && autopsy_report.source_pages.length > 0 && (
-              <div className="mt-4">
-                <CitationBadge
-                  pageNumber={autopsy_report.source_pages[0]}
-                  documentName={autopsy_report.source_document}
-                  onClick={() => onCitationClick?.(autopsy_report.source_document, autopsy_report.source_pages?.[0])}
-                />
-              </div>
-            )}
+            {autopsy_report.source_document && autopsy_report.source_pages && autopsy_report.source_pages.length > 0 && (() => {
+              const firstPage = autopsy_report.source_pages[0];
+              const page = typeof firstPage === 'object' && firstPage !== null && 'page' in firstPage
+                ? firstPage.page
+                : (typeof firstPage === 'number' ? firstPage : parseInt(String(firstPage), 10) || 1);
+              const documentId = typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
+                ? firstPage.document_id
+                : (autopsy_report as any).document_id;
+              return (
+                <div className="mt-4">
+                  <CitationBadge
+                    pageNumber={page}
+                    documentName={autopsy_report.source_document}
+                    documentId={documentId}
+                    onClick={() => onCitationClick?.(autopsy_report.source_document, page, documentId)}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </Card>
       )}

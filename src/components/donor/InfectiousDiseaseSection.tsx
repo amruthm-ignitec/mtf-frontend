@@ -11,7 +11,7 @@ interface InfectiousDiseaseSectionProps {
   serologyResults?: Record<string, string>; // Optional serology results from extraction data
   cultureResults?: Array<{ tissue_location?: string; microorganism?: string; source_page?: number }>; // Optional culture results
   criticalLabValues?: Record<string, { value: string; reference: string; unit: string }>; // Optional critical lab values
-  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function InfectiousDiseaseSection({ data, serologyResults, cultureResults, criticalLabValues, onCitationClick }: InfectiousDiseaseSectionProps) {
@@ -20,6 +20,20 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
   const present = data?.present !== undefined ? data.present : true;
+  
+  // Helper function to extract page number and document_id from citation
+  const getCitationInfo = (citation: any): { page: number; documentId?: number } => {
+    if (typeof citation === 'object' && citation !== null && 'page' in citation) {
+      return {
+        page: citation.page,
+        documentId: citation.document_id
+      };
+    }
+    // Legacy format: just a number
+    return {
+      page: typeof citation === 'number' ? citation : parseInt(String(citation), 10) || 1
+    };
+  };
   
   // Old structure support (for backward compatibility)
   const serology_report = data?.serology_report;
@@ -214,14 +228,18 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                   {pages && pages.length > 0 && (
                     <div className="mt-auto pt-4 border-t border-gray-100">
                       <div className="flex flex-wrap gap-2">
-                        {pages.map((page: number, idx: number) => (
-                          <CitationBadge
-                            key={idx}
-                            pageNumber={page}
-                            documentName="Infectious Disease Testing"
-                            onClick={() => onCitationClick?.('Infectious Disease Testing', page)}
-                          />
-                        ))}
+                        {pages.map((citation: any, idx: number) => {
+                          const { page, documentId } = getCitationInfo(citation);
+                          return (
+                            <CitationBadge
+                              key={idx}
+                              pageNumber={page}
+                              documentName="Infectious Disease Testing"
+                              documentId={documentId}
+                              onClick={() => onCitationClick?.('Infectious Disease Testing', page, documentId)}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -433,7 +451,8 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 <CitationBadge
                   pageNumber={1}
                   documentName={serology_report.source_document}
-                  onClick={() => onCitationClick?.(serology_report.source_document, 1)}
+                  documentId={(serology_report as any).document_id}
+                  onClick={() => onCitationClick?.(serology_report.source_document, 1, (serology_report as any).document_id)}
                 />
               </div>
             )}
@@ -602,7 +621,7 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                   {field.source_document && field.source_page && (
                     <div className="mt-auto pt-4 border-t border-gray-100">
                       <button
-                        onClick={() => onCitationClick?.(field.source_document, field.source_page)}
+                        onClick={() => onCitationClick?.(field.source_document, field.source_page, field.document_id)}
                         className="w-full inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300 transition-all text-xs font-medium group-hover:shadow-sm"
                         title={field.source_document ? `${field.source_document} - Page ${field.source_page}` : `Page ${field.source_page}`}
                       >
@@ -652,14 +671,18 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
             <h3 className="text-lg font-semibold text-gray-900">Source Pages</h3>
           </div>
           <div className="flex flex-wrap gap-2">
-            {pages.map((page: number, idx: number) => (
-              <CitationBadge
-                key={idx}
-                pageNumber={page}
-                documentName="Infectious Disease Testing"
-                onClick={() => onCitationClick?.('Infectious Disease Testing', page)}
-              />
-            ))}
+            {pages.map((citation: any, idx: number) => {
+              const { page, documentId } = getCitationInfo(citation);
+              return (
+                <CitationBadge
+                  key={idx}
+                  pageNumber={page}
+                  documentName="Infectious Disease Testing"
+                  documentId={documentId}
+                  onClick={() => onCitationClick?.('Infectious Disease Testing', page, documentId)}
+                />
+              );
+            })}
           </div>
         </Card>
       )}

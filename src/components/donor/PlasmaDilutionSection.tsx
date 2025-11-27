@@ -5,7 +5,7 @@ import Card from '../ui/Card';
 
 interface PlasmaDilutionSectionProps {
   data: any; // Accept flexible data structure from backend
-  onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaDilutionSectionProps) {
@@ -13,6 +13,20 @@ export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaD
   const summary = data?.summary || {};
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
+  
+  // Helper function to extract page number and document_id from citation
+  const getCitationInfo = (citation: any): { page: number; documentId?: number } => {
+    if (typeof citation === 'object' && citation !== null && 'page' in citation) {
+      return {
+        page: citation.page,
+        documentId: citation.document_id
+      };
+    }
+    // Legacy format: just a number
+    return {
+      page: typeof citation === 'number' ? citation : parseInt(String(citation), 10) || 1
+    };
+  };
 
   return (
     <div className="space-y-6">
@@ -80,14 +94,18 @@ export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaD
             <h3 className="text-lg font-semibold text-gray-900">Source Pages</h3>
           </div>
           <div className="flex flex-wrap gap-2">
-            {pages.map((page: number, idx: number) => (
-              <CitationBadge
-                key={idx}
-                pageNumber={page}
-                documentName="Plasma Dilution"
-                onClick={() => onCitationClick?.('Plasma Dilution', page)}
-              />
-            ))}
+            {pages.map((citation: any, idx: number) => {
+              const { page, documentId } = getCitationInfo(citation);
+              return (
+                <CitationBadge
+                  key={idx}
+                  pageNumber={page}
+                  documentName="Plasma Dilution"
+                  documentId={documentId}
+                  onClick={() => onCitationClick?.('Plasma Dilution', page, documentId)}
+                />
+              );
+            })}
           </div>
         </Card>
       )}

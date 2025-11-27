@@ -6,9 +6,10 @@ interface FindingDetailsModalProps {
   finding: Finding;
   isOpen: boolean;
   onClose: () => void;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function FindingDetailsModal({ finding, isOpen, onClose }: FindingDetailsModalProps) {
+export default function FindingDetailsModal({ finding, isOpen, onClose, onCitationClick }: FindingDetailsModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -52,19 +53,31 @@ export default function FindingDetailsModal({ finding, isOpen, onClose }: Findin
             <div className="border-t pt-4">
               <h3 className="font-medium mb-2">Citations</h3>
               <div className="space-y-2">
-                {finding.citations.map((citation) => (
-                  <div
-                    key={citation.id}
-                    className="bg-gray-50 p-3 rounded-md text-sm"
-                  >
-                    <div className="flex justify-between">
-                      <span>Page {citation.pageNumber}</span>
-                      <span className="text-blue-600 cursor-pointer hover:underline">
-                        View in Document
-                      </span>
+                {finding.citations.map((citation) => {
+                  const pageNumber = parseInt(citation.pageNumber, 10) || undefined;
+                  return (
+                    <div
+                      key={citation.id}
+                      className="bg-gray-50 p-3 rounded-md text-sm"
+                    >
+                      <div className="flex justify-between">
+                        <span>Page {citation.pageNumber}</span>
+                        {onCitationClick ? (
+                          <span 
+                            className="text-blue-600 cursor-pointer hover:underline"
+                            onClick={() => onCitationClick('Finding', pageNumber, citation.documentId)}
+                          >
+                            View in Document
+                          </span>
+                        ) : (
+                          <span className="text-blue-600 cursor-pointer hover:underline">
+                            View in Document
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

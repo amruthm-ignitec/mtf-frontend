@@ -4,13 +4,15 @@ import { FileText } from 'lucide-react';
 interface CitationBadgeProps {
   pageNumber: number | string;
   documentName?: string;
-  onClick?: () => void;
+  documentId?: number;
+  onClick?: (documentId?: number) => void;
   className?: string;
 }
 
 export default function CitationBadge({
   pageNumber,
   documentName,
+  documentId,
   onClick,
   className = '',
 }: CitationBadgeProps) {
@@ -18,9 +20,15 @@ export default function CitationBadge({
     ? `${documentName} - [P${pageNumber}]`
     : `[P${pageNumber}]`;
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick(documentId);
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={`inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors text-xs font-medium ${className}`}
       title={documentName ? `${documentName} - Page ${pageNumber}` : `Page ${pageNumber}`}
     >
