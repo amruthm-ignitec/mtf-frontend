@@ -760,52 +760,7 @@ export default function Summary() {
                   Infection & Immunology
                 </h3>
                 <div className="space-y-4">
-                  {/* Serology Results - Enhanced with extraction data */}
-                  {extractionData?.extracted_data?.infectious_disease_testing ? (
-                    <div>
-                      <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
-                      {extractionData.extracted_data.infectious_disease_testing.serology_report?.report_type && (
-                        <div className="mb-2">
-                          <p className="text-xs text-gray-600">
-                            Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
-                          </p>
-                        </div>
-                      )}
-                      {extractionData.extracted_data.infectious_disease_testing.other_tests && (
-                        <div className="grid grid-cols-2 gap-3">
-                          {Object.entries(extractionData.extracted_data.infectious_disease_testing.other_tests)
-                            .filter(([key, value]) => 
-                              value && 
-                              typeof value === 'object' &&
-                              'result' in value && 
-                              value.result && 
-                              (key.includes('sample') || key.includes('report') || key.includes('laboratory'))
-                            )
-                            .slice(0, 6)
-                            .map(([key, value]: [string, any]) => (
-                              <div key={key} className="bg-gray-50 p-2 rounded">
-                                <div className="text-xs text-gray-500">{value?.test_name || key || '-'}</div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {value?.result || '-'}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <a
-                          href="#infectious-disease"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleTabChange('infectious-disease');
-                          }}
-                          className="text-xs text-blue-600 hover:text-blue-800"
-                        >
-                          View detailed test results →
-                        </a>
-                      </div>
-                    </div>
-                  ) : (
+                  {/* Serology Results - Check root level serology_results first, then infectious_disease_testing */}
                   <div>
                     <h4 className="text-xs font-medium text-gray-500 mb-2">Serology Results</h4>
                     {extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0 ? (
@@ -825,11 +780,54 @@ export default function Summary() {
                           );
                         })}
                       </div>
+                    ) : extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type ? (
+                      // Fallback to old structure if available
+                      <div>
+                        <div className="mb-2">
+                          <p className="text-xs text-gray-600">
+                            Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
+                          </p>
+                        </div>
+                        {extractionData.extracted_data.infectious_disease_testing.other_tests && (
+                          <div className="grid grid-cols-2 gap-3">
+                            {Object.entries(extractionData.extracted_data.infectious_disease_testing.other_tests)
+                              .filter(([key, value]) => 
+                                value && 
+                                typeof value === 'object' &&
+                                'result' in value && 
+                                value.result && 
+                                (key.includes('sample') || key.includes('report') || key.includes('laboratory'))
+                              )
+                              .slice(0, 6)
+                              .map(([key, value]: [string, any]) => (
+                                <div key={key} className="bg-gray-50 p-2 rounded">
+                                  <div className="text-xs text-gray-500">{value?.test_name || key || '-'}</div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {value?.result || '-'}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs text-gray-500">No serology results available</p>
                     )}
+                    {(extractionData?.serology_results?.result || extractionData?.extracted_data?.infectious_disease_testing) && (
+                      <div className="mt-2">
+                        <a
+                          href="#infectious-disease"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleTabChange('infectious-disease');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          View detailed test results →
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  )}
 
                   {/* Culture Results */}
                   <div>
