@@ -7,7 +7,7 @@ import Card from '../ui/Card';
 import Table from '../ui/Table';
 
 interface InfectiousDiseaseSectionProps {
-  data: InfectiousDiseaseTesting;
+  data: any; // Accept flexible data structure from backend
   serologyResults?: Record<string, string>; // Optional serology results from extraction data
   cultureResults?: Array<{ tissue_location?: string; microorganism?: string; source_page?: number }>; // Optional culture results
   criticalLabValues?: Record<string, { value: string; reference: string; unit: string }>; // Optional critical lab values
@@ -15,7 +15,16 @@ interface InfectiousDiseaseSectionProps {
 }
 
 export default function InfectiousDiseaseSection({ data, serologyResults, cultureResults, criticalLabValues, onCitationClick }: InfectiousDiseaseSectionProps) {
-  const { serology_report, other_tests, status } = data;
+  // Handle both old structure and new backend structure
+  const summary = data?.summary || {};
+  const extractedData = data?.extracted_data || {};
+  const pages = data?.pages || [];
+  const present = data?.present !== undefined ? data.present : true;
+  
+  // Old structure support (for backward compatibility)
+  const serology_report = data?.serology_report;
+  const other_tests = data?.other_tests;
+  const status = data?.status;
 
   const getTestResultColor = (result?: string) => {
     if (!result) return 'text-gray-600';
@@ -31,15 +40,199 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
 
   const testFields = other_tests ? Object.values(other_tests).filter((field) => field) : [];
 
+  // Helper function to format value for display
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined) {
+      return '-';
+    }
+    if (typeof value === 'string' || typeof value === 'number') {
+      return String(value);
+    }
+    if (Array.isArray(value)) {
+      return value.map(item => formatValue(item)).join(', ');
+    }
+    if (typeof value === 'object') {
+      const entries = Object.entries(value)
+        .filter(([_, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => {
+          const formattedKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const formattedValue = formatValue(v);
+          return `${formattedKey}: ${formattedValue}`;
+        });
+      return entries.length > 0 ? entries.join('; ') : '-';
+    }
+    return String(value);
+  };
+
+  // Extract test results from extracted_data
+  const testResults = Object.entries(extractedData)
+    .filter(([key, value]) => {
+      // Filter out non-test fields (like test dates, etc.)
+      if (key.startsWith('Test_') || (typeof value === 'object' && value !== null && !Array.isArray(value))) {
+        return true;
+      }
+      // Include simple key-value pairs that look like test results
+      if (typeof value === 'string' && value.length > 0) {
+        return true;
+      }
+      return false;
+    })
+    .map(([key, value]) => {
+      if (key.startsWith('Test_') && typeof value === 'object' && value !== null) {
+        // This is a structured test object
+        return {
+          testName: (value as any)['Test Name'] || key,
+          result: (value as any)['Test Result'] || (value as any)['Result'] || '-',
+          specimenDate: (value as any)['Specimen Date-Time'] || (value as any)['Specimen Date'] || '-',
+          specimenType: (value as any)['Specimen Type'] || '-',
+          testMethod: (value as any)['Test Method'] || '-',
+          comments: (value as any)['Comments'] || '-',
+        };
+      } else if (typeof value === 'string' && value.length > 0) {
+        // This is a simple key-value test result
+        return {
+          testName: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          result: value,
+          specimenDate: '-',
+          specimenType: '-',
+          testMethod: '-',
+          comments: '-',
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Infectious Disease Testing</h2>
-        <StatusBadge status={status} />
+        {status ? (
+          <StatusBadge status={status} />
+        ) : present !== undefined && (
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            present ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {present ? 'Present' : 'Not Present'}
+          </span>
+        )}
       </div>
 
-      {/* Serology Report */}
+      {/* Summary Section - New Backend Structure */}
+      {summary && Object.keys(summary).length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <FileText className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Summary</h3>
+          </div>
+          <div className="space-y-4">
+            {Object.entries(summary).map(([key, value]) => {
+              const formattedValue = formatValue(value);
+              if (!formattedValue || formattedValue === '-') return null;
+              
+              return (
+                <div key={key}>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </label>
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{formattedValue}</p>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Test Results from Extracted Data - New Backend Structure */}
+      {testResults.length > 0 && (
+        <Card className="p-8">
+          <div className="flex items-center space-x-2 mb-6">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <FlaskConical className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Test Results</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {testResults.map((test, index) => {
+              const upperResult = (test?.result || '').toUpperCase();
+              const isPositive = upperResult.includes('POSITIVE') || upperResult.includes('REACTIVE') || upperResult.includes('INDETERMINATE');
+              const isNegative = upperResult.includes('NON-REACTIVE') || upperResult.includes('NEGATIVE');
+              const dotColor = isPositive ? 'bg-red-500' : isNegative ? 'bg-green-500' : 'bg-gray-400';
+              
+              return (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-400 transition-all flex flex-col"
+                >
+                  {/* Test Name */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 line-clamp-2 min-h-[2.5rem] leading-snug">
+                      {test?.testName || 'Unknown Test'}
+                    </h4>
+                    
+                    {/* Result */}
+                    {test?.result && test.result !== '-' ? (
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${dotColor} ring-2 ring-offset-1 ${
+                          isPositive ? 'ring-red-200' : isNegative ? 'ring-green-200' : 'ring-gray-200'
+                        }`}></div>
+                        <span className={`text-sm font-semibold truncate ${getTestResultColor(test.result)}`}>
+                          {test.result}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {/* Additional Test Details */}
+                    {(test?.specimenDate && test.specimenDate !== '-') && (
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500">Specimen Date</p>
+                        <p className="text-xs font-medium text-gray-900">{test.specimenDate}</p>
+                      </div>
+                    )}
+                    {(test?.specimenType && test.specimenType !== '-') && (
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500">Specimen Type</p>
+                        <p className="text-xs font-medium text-gray-900">{test.specimenType}</p>
+                      </div>
+                    )}
+                    {(test?.testMethod && test.testMethod !== '-') && (
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500">Test Method</p>
+                        <p className="text-xs font-medium text-gray-900">{test.testMethod}</p>
+                      </div>
+                    )}
+                    {(test?.comments && test.comments !== '-' && test.comments !== '--') && (
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500">Comments</p>
+                        <p className="text-xs font-medium text-gray-900">{test.comments}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Citation */}
+                  {pages && pages.length > 0 && (
+                    <div className="mt-auto pt-4 border-t border-gray-100">
+                      <div className="flex flex-wrap gap-2">
+                        {pages.map((page: number, idx: number) => (
+                          <CitationBadge
+                            key={idx}
+                            pageNumber={page}
+                            documentName="Infectious Disease Testing"
+                            onClick={() => onCitationClick?.('Infectious Disease Testing', page)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Serology Report - Old Structure Support */}
       {serology_report && (
         <Card className="p-8">
           {/* Header Section */}
@@ -360,8 +553,8 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
         </Card>
       )}
 
-      {/* Test Results - Modern Card Layout */}
-      {testFields.length > 0 && (
+      {/* Test Results - Old Structure Support */}
+      {testFields.length > 0 && !testResults.length && (
         <Card className="p-8">
           <div className="flex items-center space-x-2 mb-6">
             <div className="p-2 bg-blue-50 rounded-lg">
@@ -447,6 +640,26 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 <p className="text-sm text-gray-900 mt-1">{other_tests.page_number.result}</p>
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Source Pages - New Backend Structure */}
+      {pages && pages.length > 0 && !serology_report && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <FileText className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Source Pages</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pages.map((page: number, idx: number) => (
+              <CitationBadge
+                key={idx}
+                pageNumber={page}
+                documentName="Infectious Disease Testing"
+                onClick={() => onCitationClick?.('Infectious Disease Testing', page)}
+              />
+            ))}
           </div>
         </Card>
       )}
