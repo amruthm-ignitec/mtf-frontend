@@ -21,6 +21,7 @@ import PastDataSection from '../components/donor/PastDataSection';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import PDFViewer from '../components/ui/PDFViewer';
+import PDFViewerWithPage from '../components/ui/PDFViewerWithPage';
 
 // Inline components
 const ClinicalInformation = ({ donor }: { donor: DonorRecord }) => (
@@ -1294,23 +1295,16 @@ export default function Summary() {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden bg-gray-50">
-                {selectedPdfUrl ? (
-                  <iframe
-                    key={`${selectedPdfUrl}-${selectedPageNumber || 1}`}
-                    src={`${selectedPdfUrl}${selectedPageNumber ? `#page=${selectedPageNumber}` : ''}`}
-                    className="w-full h-full border-0"
-                    title="PDF Viewer"
-                    style={{ minHeight: '500px' }}
-                    allow="fullscreen"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <div className="text-center">
-                      <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm">No document selected</p>
-                    </div>
-                  </div>
-                )}
+                <PDFViewerWithPage
+                  pdfUrl={selectedPdfUrl}
+                  pageNumber={selectedPageNumber || 1}
+                  onClose={() => {
+                    setSelectedPdfUrl(null);
+                    setSelectedPageNumber(null);
+                    setSelectedDocumentName(null);
+                  }}
+                  documentName={selectedDocumentName || 'Document'}
+                />
               </div>
             </div>
           </div>
