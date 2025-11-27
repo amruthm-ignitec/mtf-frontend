@@ -1139,15 +1139,24 @@ export default function Summary() {
   };
 
   // Handle citation click
-  const handleCitationClick = (sourceDocument: string, pageNumber?: number, documentId?: number) => {
-    // If document_id is provided, look up the document from the documents array
+  const handleCitationClick = async (sourceDocument: string, pageNumber?: number, documentId?: number) => {
+    // If document_id is provided, generate SAS URL for secure access
     if (documentId) {
       const document = documents.find(doc => doc.id === documentId);
-      if (document && document.azure_blob_url) {
-        setSelectedPdfUrl(document.azure_blob_url);
-        setSelectedPageNumber(pageNumber || undefined);
-        setSelectedDocumentName(document.original_filename || document.filename || sourceDocument);
-        return;
+      if (document) {
+        try {
+          // Generate SAS URL (valid for 30 minutes)
+          const sasResponse = await apiService.getDocumentSasUrl(documentId, 30);
+          if (sasResponse && sasResponse.sas_url) {
+            setSelectedPdfUrl(sasResponse.sas_url);
+            setSelectedPageNumber(pageNumber || undefined);
+            setSelectedDocumentName(sasResponse.original_filename || document.original_filename || document.filename || sourceDocument);
+            return;
+          }
+        } catch (error) {
+          console.error('Error generating SAS URL:', error);
+          // Fall through to fallback behavior
+        }
       }
     }
     
@@ -1159,11 +1168,20 @@ export default function Summary() {
         return originalName.includes(sourceName) || sourceName.includes(originalName);
       });
       
-      if (matchedDocument && matchedDocument.azure_blob_url) {
-        setSelectedPdfUrl(matchedDocument.azure_blob_url);
-        setSelectedPageNumber(pageNumber || undefined);
-        setSelectedDocumentName(matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
-        return;
+      if (matchedDocument) {
+        try {
+          // Try to generate SAS URL for matched document
+          const sasResponse = await apiService.getDocumentSasUrl(matchedDocument.id, 30);
+          if (sasResponse && sasResponse.sas_url) {
+            setSelectedPdfUrl(sasResponse.sas_url);
+            setSelectedPageNumber(pageNumber || undefined);
+            setSelectedDocumentName(sasResponse.original_filename || matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
+            return;
+          }
+        } catch (error) {
+          console.error('Error generating SAS URL for matched document:', error);
+          // Fall through to final fallback
+        }
       }
     }
     

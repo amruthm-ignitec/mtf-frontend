@@ -159,6 +159,10 @@ class ApiService {
     return this.request<unknown>(`/documents/${documentId}/status`);
   }
 
+  async getDocumentSasUrl(documentId: number, expiryMinutes: number = 30): Promise<{ sas_url: string; expiry_minutes: number; original_filename: string }> {
+    return this.request<{ sas_url: string; expiry_minutes: number; original_filename: string }>(`/documents/${documentId}/sas-url?expiry_minutes=${expiryMinutes}`);
+  }
+
   async deleteDocument(documentId: number): Promise<void> {
     return this.request<void>(`/documents/${documentId}`, {
       method: 'DELETE',
