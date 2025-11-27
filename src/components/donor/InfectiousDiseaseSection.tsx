@@ -8,10 +8,13 @@ import Table from '../ui/Table';
 
 interface InfectiousDiseaseSectionProps {
   data: InfectiousDiseaseTesting;
+  serologyResults?: Record<string, string>; // Optional serology results from extraction data
+  cultureResults?: Array<{ tissue_location?: string; microorganism?: string; source_page?: number }>; // Optional culture results
+  criticalLabValues?: Record<string, { value: string; reference: string; unit: string }>; // Optional critical lab values
   onCitationClick?: (sourceDocument: string, pageNumber?: number) => void;
 }
 
-export default function InfectiousDiseaseSection({ data, onCitationClick }: InfectiousDiseaseSectionProps) {
+export default function InfectiousDiseaseSection({ data, serologyResults, cultureResults, criticalLabValues, onCitationClick }: InfectiousDiseaseSectionProps) {
   const { serology_report, other_tests, status } = data;
 
   const getTestResultColor = (result?: string) => {
@@ -73,39 +76,38 @@ export default function InfectiousDiseaseSection({ data, onCitationClick }: Infe
                   <h4 className="text-base font-bold text-gray-900">Infectious Disease Serology</h4>
                 </div>
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-5 flex-1">
-                  <div className="grid grid-cols-2 gap-3 h-full">
-                    {[
-                      { test: 'HIV 1/2 Ab/Ag', result: 'Non-reactive', isReactive: false },
-                      { test: 'HBsAg', result: 'Non-reactive', isReactive: false },
-                      { test: 'HBcAb', result: 'Non-reactive', isReactive: false },
-                      { test: 'HCV Ab', result: 'Non-reactive', isReactive: false },
-                      { test: 'CMV IgG', result: 'Reactive', isReactive: true },
-                      { test: 'CMV IgM', result: 'Non-reactive', isReactive: false },
-                      { test: 'Treponema pallidum', result: 'Non-reactive', isReactive: false },
-                      { test: 'HTLV I/II', result: 'Non-reactive', isReactive: false },
-                    ].map((item, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                          item.isReactive
-                            ? 'bg-white border-orange-200 hover:border-orange-300'
-                            : 'bg-white border-green-200 hover:border-green-300'
-                        }`}
-                      >
-                        <span className="text-sm font-medium text-gray-700">{item.test}</span>
-                        <div className="flex items-center gap-2">
-                          <div className={`h-2 w-2 rounded-full ${
-                            item.isReactive ? 'bg-orange-500' : 'bg-green-500'
-                          }`}></div>
-                          <span className={`text-sm font-semibold ${
-                            item.isReactive ? 'text-orange-600' : 'text-green-600'
-                          }`}>
-                            {item.result}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  {serologyResults && Object.keys(serologyResults).length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 h-full">
+                      {Object.entries(serologyResults).map(([testName, result]) => {
+                        const resultStr = String(result).toLowerCase();
+                        const isReactive = resultStr.includes('reactive') || resultStr.includes('positive');
+                        return (
+                          <div
+                            key={testName}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                              isReactive
+                                ? 'bg-white border-orange-200 hover:border-orange-300'
+                                : 'bg-white border-green-200 hover:border-green-300'
+                            }`}
+                          >
+                            <span className="text-sm font-medium text-gray-700">{testName}</span>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${
+                                isReactive ? 'bg-orange-500' : 'bg-green-500'
+                              }`}></div>
+                              <span className={`text-sm font-semibold ${
+                                isReactive ? 'text-orange-600' : 'text-green-600'
+                              }`}>
+                                {String(result)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No serology results available</p>
+                  )}
                 </div>
               </div>
 
@@ -116,38 +118,47 @@ export default function InfectiousDiseaseSection({ data, onCitationClick }: Infe
                   <h4 className="text-base font-bold text-gray-900">Culture Results</h4>
                 </div>
                 <div className="space-y-4 flex-1">
-                  <div className="bg-gradient-to-br from-green-50 to-white rounded-xl border border-green-200 p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h5 className="text-sm font-semibold text-gray-900 mb-1">Blood Culture</h5>
-                        <p className="text-xs text-gray-500">72 hours</p>
-                      </div>
-                      <div className="px-2.5 py-1 bg-green-100 rounded-full">
-                        <span className="text-xs font-semibold text-green-700">No Growth</span>
-                      </div>
+                  {cultureResults && cultureResults.length > 0 ? (
+                    cultureResults.slice(0, 2).map((culture, idx) => {
+                      const hasGrowth = culture.microorganism && 
+                        culture.microorganism.toLowerCase() !== 'no growth' && 
+                        culture.microorganism.toLowerCase() !== 'negative';
+                      return (
+                        <div 
+                          key={idx}
+                          className={`bg-gradient-to-br rounded-xl border p-5 ${
+                            hasGrowth 
+                              ? 'from-red-50 to-white border-red-200' 
+                              : 'from-green-50 to-white border-green-200'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h5 className="text-sm font-semibold text-gray-900 mb-1">
+                                {culture.tissue_location || 'Culture'}
+                              </h5>
+                              {culture.source_page && (
+                                <p className="text-xs text-gray-500">Page {culture.source_page}</p>
+                              )}
+                            </div>
+                            <div className={`px-2.5 py-1 rounded-full ${
+                              hasGrowth ? 'bg-red-100' : 'bg-green-100'
+                            }`}>
+                              <span className={`text-xs font-semibold ${
+                                hasGrowth ? 'text-red-700' : 'text-green-700'
+                              }`}>
+                                {culture.microorganism || 'No Growth'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-5">
+                      <p className="text-sm text-gray-500">No culture results available</p>
                     </div>
-                    <div className="pt-3 border-t border-green-200">
-                      <p className="text-xs text-gray-600">
-                        <span className="font-medium">Collected:</span> March 11, 2024
-                      </p>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-br from-yellow-50 to-white rounded-xl border border-yellow-200 p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h5 className="text-sm font-semibold text-gray-900 mb-1">Tissue Recovery Swabs</h5>
-                        <p className="text-xs text-gray-500">48-hour preliminary</p>
-                      </div>
-                      <div className="px-2.5 py-1 bg-yellow-100 rounded-full">
-                        <span className="text-xs font-semibold text-yellow-700">Pending</span>
-                      </div>
-                    </div>
-                    <div className="pt-3 border-t border-yellow-200">
-                      <p className="text-xs text-gray-600">
-                        <span className="font-medium">Preliminary:</span> No Growth
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -160,30 +171,31 @@ export default function InfectiousDiseaseSection({ data, onCitationClick }: Infe
                   <div className="h-1 w-1 bg-indigo-600 rounded-full"></div>
                   <h4 className="text-base font-bold text-gray-900">Critical Lab Values</h4>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { label: 'WBC', value: '8.2 x 10³/μL', reference: '3.5-10.5', unit: 'x 10³/μL' },
-                    { label: 'Hemoglobin', value: '13.8', reference: '12.0-15.5', unit: 'g/dL' },
-                    { label: 'Platelets', value: '245 x 10³/μL', reference: '150-450', unit: 'x 10³/μL' },
-                    { label: 'Creatinine', value: '0.9', reference: '0.6-1.2', unit: 'mg/dL' },
-                  ].map((item, index) => (
-                    <div key={index} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                      <div className="mb-3">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                          {item.label}
-                        </p>
-                        <div className="flex items-baseline space-x-1">
-                          <span className="text-lg font-bold text-gray-900">{item.value}</span>
+                {criticalLabValues && Object.keys(criticalLabValues).length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.entries(criticalLabValues).map(([label, labValue]) => (
+                      <div key={label} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                        <div className="mb-3">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                            {label}
+                          </p>
+                          <div className="flex items-baseline space-x-1">
+                            <span className="text-lg font-bold text-gray-900">{labValue.value}</span>
+                          </div>
+                          </div>
+                        <div className="pt-3 border-t border-gray-100">
+                          <p className="text-xs text-gray-500">
+                            Reference: <span className="font-medium text-gray-700">{labValue.reference}</span>
+                          </p>
                         </div>
                       </div>
-                      <div className="pt-3 border-t border-gray-100">
-                        <p className="text-xs text-gray-500">
-                          Reference: <span className="font-medium text-gray-700">{item.reference}</span>
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <p className="text-sm text-gray-500">No critical lab values available</p>
+                  </div>
+                )}
               </div>
 
               {/* Sample Information - 1/2 width */}

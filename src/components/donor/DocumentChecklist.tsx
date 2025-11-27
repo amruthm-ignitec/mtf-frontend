@@ -15,67 +15,69 @@ interface DocumentChecklistProps {
 
 export default function DocumentChecklist({ documents, extractionData }: DocumentChecklistProps) {
   const [showAllItems, setShowAllItems] = useState(false);
-  // Helper function to check if a document type exists
-  const hasDocument = (keywords: string[]): boolean => {
-    return documents.some(doc => 
-      keywords.some(keyword => 
-        doc.document_type?.toLowerCase().includes(keyword.toLowerCase())
-      )
-    );
+  
+  // Mapping from display names to extraction data keys
+  const documentMapping: Record<string, string> = {
+    'Donor Log-In Information Packet (Templates 195 & 196)': 'donor_log_in_information_packet',
+    'Donor Information': 'donor_information',
+    'Donor Risk Assessment Interview (DRAI)': 'donor_risk_assessment_interview',
+    'Physical Assessment': 'physical_assessment',
+    'Medical Records Review Summary': 'medical_records_review_summary',
+    'Tissue Recovery Information': 'tissue_recovery_information',
+    'Plasma Dilution': 'plasma_dilution',
+    'Authorization for Tissue Donation': 'authorization_for_tissue_donation',
+    'Infectious Disease Testing': 'infectious_disease_testing',
+    'Medical Records': 'medical_records'
+  };
+
+  // Check if document is present using extraction data
+  const isDocumentPresent = (extractionKey: string): boolean => {
+    if (!extractionData?.extracted_data) return false;
+    const section = extractionData.extracted_data[extractionKey];
+    return section?.present === true;
   };
 
   // Initial Paperwork items
-  // Items marked with shouldBeChecked: false will not be auto-checked
   const initialPaperwork = [
     {
       name: 'Donor Log-In Information Packet (Templates 195 & 196)',
-      keywords: ['donor log-in', 'template 195', 'template 196', 'login packet', 'information packet'],
-      shouldBeChecked: true
+      extractionKey: 'donor_log_in_information_packet'
     },
     {
       name: 'Donor Information',
-      keywords: ['donor information', 'donor data', 'donor details'],
-      shouldBeChecked: true
+      extractionKey: 'donor_information'
     },
     {
       name: 'Donor Risk Assessment Interview (DRAI)',
-      keywords: ['drai', 'risk assessment', 'donor risk assessment interview'],
-      shouldBeChecked: true
+      extractionKey: 'donor_risk_assessment_interview'
     },
     {
       name: 'Physical Assessment',
-      keywords: ['physical assessment', 'physical exam', 'physical evaluation'],
-      shouldBeChecked: false // Not checked
+      extractionKey: 'physical_assessment'
     },
     {
       name: 'Medical Records Review Summary',
-      keywords: ['medical records review', 'records review summary', 'medical review'],
-      shouldBeChecked: true
+      extractionKey: 'medical_records_review_summary'
     },
     {
       name: 'Tissue Recovery Information',
-      keywords: ['tissue recovery', 'recovery information', 'tissue recovery info'],
-      shouldBeChecked: true
+      extractionKey: 'tissue_recovery_information'
     },
     {
       name: 'Plasma Dilution',
-      keywords: ['plasma dilution', 'plasma', 'dilution'],
-      shouldBeChecked: true
+      extractionKey: 'plasma_dilution'
     },
     {
       name: 'Authorization for Tissue Donation',
-      keywords: ['authorization', 'tissue donation', 'authorization form', 'consent'],
-      shouldBeChecked: true
+      extractionKey: 'authorization_for_tissue_donation'
     },
     {
       name: 'Infectious Disease Testing',
-      keywords: ['infectious disease', 'disease testing', 'serology', 'infectious'],
-      shouldBeChecked: true
+      extractionKey: 'infectious_disease_testing'
     },
     {
       name: 'Medical Records',
-      keywords: ['medical records', 'medical history', 'clinical records', 'patient records'],
-      shouldBeChecked: false // Not checked
+      extractionKey: 'medical_records'
     }
   ];
 
@@ -150,8 +152,8 @@ export default function DocumentChecklist({ documents, extractionData }: Documen
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Initial Paperwork</h3>
         <div className="space-y-3">
           {(showAllItems ? initialPaperwork : initialPaperwork.slice(0, 3)).map((item, index) => {
-            // Check if document exists OR if it should be marked as checked by default
-            const isPresent = hasDocument(item.keywords) || (item.shouldBeChecked ?? false);
+            // Check if document is present using extraction data
+            const isPresent = isDocumentPresent(item.extractionKey);
             return (
               <div
                 key={index}

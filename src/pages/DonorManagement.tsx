@@ -432,14 +432,8 @@ export default function DonorManagement() {
           return <span className="text-xs text-gray-400">—</span>;
         }
         
-        // Always show "completed" for the latest donor
-        let status: string;
-        if (donor.isLatestDonor) {
-          status = 'completed';
-        } else {
-          // Use processingStatus from details, or generate dummy status for others
-          status = donor.processingStatus || (donor.id % 4 === 0 ? 'completed' : donor.id % 4 === 1 ? 'processing' : donor.id % 4 === 2 ? 'pending' : 'processing');
-        }
+        // Use processingStatus from backend
+        const status = donor.processingStatus || 'pending';
         
         const statusLabels: Record<string, string> = {
           'completed': 'Completed',

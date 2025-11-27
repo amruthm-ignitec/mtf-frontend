@@ -25,6 +25,10 @@ interface TissueEligibility {
   description?: string;
 }
 
+interface TissueEligibilityAnalysisProps {
+  eligibilityData?: TissueEligibility[];
+}
+
 const mockTissueEligibility: TissueEligibility[] = [
   {
     id: 'ms1',
@@ -128,8 +132,9 @@ const mockTissueEligibility: TissueEligibility[] = [
   },
 ];
 
-export default function TissueEligibilityAnalysis() {
-  const [selectedTissue, setSelectedTissue] = useState<TissueEligibility | null>(mockTissueEligibility[0]);
+export default function TissueEligibilityAnalysis({ eligibilityData }: TissueEligibilityAnalysisProps) {
+  const tissueEligibility = eligibilityData || mockTissueEligibility;
+  const [selectedTissue, setSelectedTissue] = useState<TissueEligibility | null>(tissueEligibility[0] || null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -165,10 +170,10 @@ export default function TissueEligibilityAnalysis() {
   };
 
   const summary = {
-    total: mockTissueEligibility.length,
-    eligible: mockTissueEligibility.filter(t => t.status === 'Eligible').length,
-    reviewRequired: mockTissueEligibility.filter(t => t.status === 'Review Required').length,
-    ineligible: mockTissueEligibility.filter(t => t.status === 'Ineligible').length,
+    total: tissueEligibility.length,
+    eligible: tissueEligibility.filter(t => t.status === 'Eligible').length,
+    reviewRequired: tissueEligibility.filter(t => t.status === 'Review Required').length,
+    ineligible: tissueEligibility.filter(t => t.status === 'Ineligible').length,
   };
 
   return (
@@ -218,7 +223,7 @@ export default function TissueEligibilityAnalysis() {
 
           {/* Tissue List */}
           <div className="space-y-4">
-            {mockTissueEligibility.map((tissue) => (
+            {tissueEligibility.map((tissue) => (
               <div
                 key={tissue.id}
                 onClick={() => setSelectedTissue(tissue)}
