@@ -99,12 +99,7 @@ export default function Documents() {
       // Fetch documents for this donor
       const documentsData = await apiService.getDonorDocuments(Number(donorId));
       
-      // Ensure the first document is always marked as completed for easy access to summary
-      if (documentsData.length > 0 && documentsData[0].status !== 'completed') {
-        documentsData[0].status = 'completed';
-        documentsData[0].progress = 100;
-      }
-      
+      // Use the actual status from backend - don't override it
       setDocuments(documentsData);
 
       // Try to fetch extraction data for conditional documents status
