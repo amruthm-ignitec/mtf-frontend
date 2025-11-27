@@ -533,7 +533,7 @@ export default function Queue() {
     const fetchDonors = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${apiUrl}/donor/details`);
+        const response = await fetch(`${apiUrl}/donors/queue/details`);
         if (!response.ok) {
           throw new Error('Failed to fetch donor data');
         }

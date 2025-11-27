@@ -167,7 +167,7 @@ class ApiService {
 
   // Extraction data methods
   async getDonorExtractionData(donorId: number): Promise<ExtractionDataResponse> {
-    return this.request<ExtractionDataResponse>(`/donor/${donorId}/extraction-data`);
+    return this.request<ExtractionDataResponse>(`/donors/${donorId}/extraction-data`);
   }
 
   // User management methods (Admin only)
