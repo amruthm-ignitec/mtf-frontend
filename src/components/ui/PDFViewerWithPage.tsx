@@ -3,13 +3,13 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Set up PDF.js worker - use CDN with version matching react-pdf's internal pdfjs-dist
-// react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally
-if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  // Use CDN with the exact version that react-pdf uses (5.4.296)
-  // This ensures compatibility and avoids module resolution issues
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs`;
-}
+// Import PDF.js worker using Vite's ?url syntax - this is the recommended approach for Vite
+// This ensures Vite properly resolves and bundles the worker file
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+// Set up PDF.js worker - must be set synchronously before any Document components are rendered
+// This is critical - the worker must be configured before react-pdf tries to use it
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface PDFViewerWithPageProps {
   pdfUrl: string;
