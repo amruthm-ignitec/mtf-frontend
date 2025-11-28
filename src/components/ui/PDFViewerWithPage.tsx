@@ -114,19 +114,22 @@ export default function PDFViewerWithPage({
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     console.log('PDF document loaded successfully:', { numPages, pdfUrl });
-    setNumPages(numPages);
-    setLoading(false);
-    setError(null);
-    // Ensure we're on the correct page
-    if (pageNumber && pageNumber <= numPages) {
-      setCurrentPage(pageNumber);
-      // Scroll to target page after document loads
-      setTimeout(() => {
-        if (pageRef.current) {
-          pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 200);
-    }
+    // Add a small delay to ensure worker is fully initialized before rendering pages
+    setTimeout(() => {
+      setNumPages(numPages);
+      setLoading(false);
+      setError(null);
+      // Ensure we're on the correct page
+      if (pageNumber && pageNumber <= numPages) {
+        setCurrentPage(pageNumber);
+        // Scroll to target page after document loads
+        setTimeout(() => {
+          if (pageRef.current) {
+            pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 200);
+      }
+    }, 100);
   };
 
   const onDocumentLoadError = (error: Error) => {
@@ -158,7 +161,8 @@ export default function PDFViewerWithPage({
   }
 
   // Render all pages for full document navigation
-  const pagesToRender = numPages ? Array.from({ length: numPages }, (_, i) => i + 1) : [];
+  // Only render pages after document is fully loaded to avoid worker transport issues
+  const pagesToRender = numPages && !loading ? Array.from({ length: numPages }, (_, i) => i + 1) : [];
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -185,7 +189,7 @@ export default function PDFViewerWithPage({
               }
               options={pdfOptions}
             >
-              {loading && numPages === null ? null : pagesToRender.map((pageNum) => {
+              {pagesToRender.length > 0 ? pagesToRender.map((pageNum) => {
                 const isTargetPage = pageNum === currentPage;
                 
                 return (
@@ -213,7 +217,7 @@ export default function PDFViewerWithPage({
                     />
                   </div>
                 );
-              })}
+              }) : null}
             </Document>
           </div>
         ) : null}
