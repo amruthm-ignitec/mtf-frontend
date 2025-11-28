@@ -3,10 +3,12 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Set up PDF.js worker - use local worker file to avoid CORS issues
+// Set up PDF.js worker - use CDN with version matching react-pdf's internal pdfjs-dist
+// react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally
 if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  // Use local worker file from public folder
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  // Use CDN with the exact version that react-pdf uses (5.4.296)
+  // This ensures compatibility and avoids module resolution issues
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs`;
 }
 
 interface PDFViewerWithPageProps {
