@@ -373,18 +373,24 @@ export default function DonorManagement() {
           return <span className="text-xs text-gray-400">—</span>;
         }
         
-        // Check if documents are still processing (has processing status and no completed documents yet)
+        // Check if documents are still processing
         const hasProcessingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'processing');
-        const hasCompletedDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'completed');
         const hasUploadedDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status !== 'missing');
         
-        // If there are processing documents but no completed ones, show queue message
-        // Also show queue message if status is "processing" from backend
-        const isProcessing = (hasProcessingDocs && !hasCompletedDocs) || 
-                            (donor.processingStatus === 'processing' && !hasCompletedDocs) ||
-                            (donor.processingStatus === 'pending' && hasUploadedDocs);
+        // Processing is complete if backend status is completed, failed, or rejected
+        // These statuses indicate processing has finished (successfully or not)
+        const isProcessingComplete = donor.processingStatus === 'completed' || 
+                                     donor.processingStatus === 'failed' || 
+                                     donor.processingStatus === 'rejected';
         
-        // Only show missing documents if processing is complete
+        // Show queue message only if:
+        // 1. Processing is NOT complete (status is 'processing' or 'pending'), AND
+        // 2. There are documents uploaded (so we know something is being processed)
+        const isProcessing = !isProcessingComplete && 
+                             (donor.processingStatus === 'processing' || donor.processingStatus === 'pending') && 
+                             hasUploadedDocs;
+        
+        // Check for missing documents
         const hasMissingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'missing');
         
         return (
