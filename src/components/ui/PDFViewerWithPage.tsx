@@ -3,11 +3,10 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Set up PDF.js worker - use cdnjs which is recommended by react-pdf
-// This automatically matches the pdfjs version that react-pdf is using
+// Set up PDF.js worker - use local worker file to avoid CORS issues
 if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  // Use cdnjs CDN with version from pdfjs - this ensures compatibility
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  // Use local worker file from public folder
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 interface PDFViewerWithPageProps {
@@ -27,8 +26,60 @@ export default function PDFViewerWithPage({
   const [currentPage, setCurrentPage] = useState(pageNumber);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<ArrayBuffer | string | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch PDF as blob/arraybuffer to handle authentication properly
+  // This avoids CORS issues when PDF.js worker tries to load from Azure Blob Storage
+  useEffect(() => {
+    const fetchPdf = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Check if URL needs to be fetched with authentication
+        // - API endpoints need auth headers (check for /documents/ or /api/ in URL)
+        // - Azure Blob Storage URLs should be fetched to avoid CORS issues
+        // - Local files can be used directly
+        const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
+        const isAzureBlobUrl = pdfUrl.includes('blob.core.windows.net');
+        const isLocalFile = pdfUrl.startsWith('/') && !isApiUrl && !isAzureBlobUrl;
+        
+        if (isApiUrl || isAzureBlobUrl) {
+          // Fetch PDF with authentication headers for API endpoints
+          // For Azure Blob URLs, fetch to avoid CORS issues even if they have SAS tokens
+          const token = localStorage.getItem('authToken');
+          const headers: HeadersInit = {};
+          
+          if (isApiUrl && token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          const response = await fetch(pdfUrl, {
+            headers,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to load PDF: ${response.status} ${response.statusText}`);
+          }
+
+          // Convert response to arraybuffer for PDF.js
+          const arrayBuffer = await response.arrayBuffer();
+          setPdfData(arrayBuffer);
+        } else {
+          // For local files, use URL directly
+          setPdfData(pdfUrl);
+        }
+      } catch (err) {
+        console.error('Error fetching PDF:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        setLoading(false);
+      }
+    };
+
+    fetchPdf();
+  }, [pdfUrl]);
 
   useEffect(() => {
     setCurrentPage(pageNumber);
@@ -60,6 +111,18 @@ export default function PDFViewerWithPage({
     }
   };
 
+  // Don't render Document until PDF data is loaded
+  if (!pdfData && loading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-sm text-gray-600">Loading PDF...</span>
+        </div>
+      </div>
+    );
+  }
+
   const onDocumentLoadError = (error: Error) => {
     console.error('PDF document load error:', error);
     console.error('PDF URL:', pdfUrl);
@@ -90,10 +153,10 @@ export default function PDFViewerWithPage({
               <p className="text-xs text-gray-500">Please try again or contact support.</p>
             </div>
           </div>
-        ) : (
+        ) : pdfData ? (
           <div className="flex flex-col items-center">
             <Document
-              file={pdfUrl}
+              file={pdfData}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={
@@ -105,10 +168,6 @@ export default function PDFViewerWithPage({
               options={{
                 cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/cmaps/',
                 cMapPacked: true,
-                httpHeaders: {
-                  'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
-                },
-                withCredentials: false,
                 standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/standard_fonts/',
               }}
             >
@@ -143,7 +202,7 @@ export default function PDFViewerWithPage({
               })}
             </Document>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
