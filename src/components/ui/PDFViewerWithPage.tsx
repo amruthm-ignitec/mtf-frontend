@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { ZoomIn, ZoomOut, ExternalLink, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 // Set up PDF.js worker - must match react-pdf's internal pdfjs-dist version (5.4.296)
 // react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally, so we must use the same version
@@ -37,6 +38,8 @@ export default function PDFViewerWithPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfData, setPdfData] = useState<ArrayBuffer | string | null>(null);
+  const [scale, setScale] = useState(1.0);
+  const [pageInput, setPageInput] = useState<string>('');
   const pageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +96,13 @@ export default function PDFViewerWithPage({
 
   useEffect(() => {
     setCurrentPage(pageNumber);
+    setPageInput(pageNumber.toString());
   }, [pageNumber]);
+
+  // Update page input when current page changes
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
 
   useEffect(() => {
     // Scroll to the target page after it renders
@@ -145,8 +154,60 @@ export default function PDFViewerWithPage({
     // The page will show a placeholder or skip rendering
   };
 
-  // Calculate width for sidebar (approximately 1/3 of screen)
-  const pageWidth = Math.min(600, window.innerWidth * 0.3);
+  // Calculate width for sidebar with zoom
+  const baseWidth = Math.min(600, window.innerWidth * 0.3);
+  const pageWidth = baseWidth * scale;
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.25, 3.0));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(prev - 0.25, 0.5));
+  };
+
+  const handleZoomReset = () => {
+    setScale(1.0);
+  };
+
+  // Page navigation
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (numPages && currentPage < numPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePageJump = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pageNum = parseInt(pageInput);
+    if (pageNum >= 1 && numPages && pageNum <= numPages) {
+      setCurrentPage(pageNum);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  // Open in new tab
+  const handleOpenInNewTab = () => {
+    // Create a blob URL from the PDF data if it's an ArrayBuffer
+    if (pdfData instanceof ArrayBuffer) {
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      // Clean up the blob URL after a delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    } else {
+      // For URLs, open directly
+      window.open(pdfUrl, '_blank');
+    }
+  };
 
   // Don't render Document until PDF data is loaded
   if (!pdfData && loading) {
@@ -166,6 +227,97 @@ export default function PDFViewerWithPage({
 
   return (
     <div className="h-full w-full flex flex-col">
+      {/* Toolbar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-sm font-medium text-gray-700 truncate">
+            {documentName || 'Document'}
+          </span>
+          {numPages && (
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              ({currentPage} / {numPages})
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Page Navigation */}
+          <div className="flex items-center gap-1 border border-gray-300 rounded-lg">
+            <button
+              onClick={handlePreviousPage}
+              disabled={currentPage <= 1}
+              className="p-1.5 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg transition-colors"
+              title="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <form onSubmit={handlePageJump} className="flex items-center">
+              <input
+                type="text"
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onBlur={handlePageJump}
+                className="w-12 px-2 py-1 text-sm text-center border-0 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                title="Go to page"
+              />
+            </form>
+            <button
+              onClick={handleNextPage}
+              disabled={!numPages || currentPage >= numPages}
+              className="p-1.5 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-r-lg transition-colors"
+              title="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center gap-1 border border-gray-300 rounded-lg">
+            <button
+              onClick={handleZoomOut}
+              disabled={scale <= 0.5}
+              className="p-1.5 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg transition-colors"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleZoomReset}
+              className="px-2 py-1 text-xs hover:bg-gray-100 transition-colors"
+              title="Reset zoom"
+            >
+              {Math.round(scale * 100)}%
+            </button>
+            <button
+              onClick={handleZoomIn}
+              disabled={scale >= 3.0}
+              className="p-1.5 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-r-lg transition-colors"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Open in New Tab */}
+          <button
+            onClick={handleOpenInNewTab}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300"
+            title="Open in new tab"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </button>
+
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close viewer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       {/* PDF Content */}
       <div ref={containerRef} className="flex-1 overflow-auto bg-gray-100 p-2">
         {error ? (
@@ -203,6 +355,7 @@ export default function PDFViewerWithPage({
                       renderTextLayer={false}
                       renderAnnotationLayer={true}
                       width={pageWidth}
+                      scale={scale}
                       onLoadError={onPageLoadError}
                       loading={
                         <div className="flex items-center justify-center p-4 bg-white rounded shadow min-h-[400px]">
