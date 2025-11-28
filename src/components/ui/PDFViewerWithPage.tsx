@@ -95,6 +95,14 @@ export default function PDFViewerWithPage({
     }
   }, [currentPage, numPages]);
 
+  // Memoize PDF.js options to prevent unnecessary reloads
+  // Must be called before any conditional returns to follow Rules of Hooks
+  const pdfOptions = useMemo(() => ({
+    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/standard_fonts/',
+  }), []);
+
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     console.log('PDF document loaded successfully:', { numPages, pdfUrl });
     setNumPages(numPages);
@@ -112,18 +120,6 @@ export default function PDFViewerWithPage({
     }
   };
 
-  // Don't render Document until PDF data is loaded
-  if (!pdfData && loading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-sm text-gray-600">Loading PDF...</span>
-        </div>
-      </div>
-    );
-  }
-
   const onDocumentLoadError = (error: Error) => {
     console.error('PDF document load error:', error);
     console.error('PDF URL:', pdfUrl);
@@ -140,12 +136,17 @@ export default function PDFViewerWithPage({
   // Calculate width for sidebar (approximately 1/3 of screen)
   const pageWidth = Math.min(600, window.innerWidth * 0.3);
 
-  // Memoize PDF.js options to prevent unnecessary reloads
-  const pdfOptions = useMemo(() => ({
-    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/cmaps/',
-    cMapPacked: true,
-    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/standard_fonts/',
-  }), []);
+  // Don't render Document until PDF data is loaded
+  if (!pdfData && loading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-sm text-gray-600">Loading PDF...</span>
+        </div>
+      </div>
+    );
+  }
 
   // Render all pages for full document navigation
   const pagesToRender = numPages ? Array.from({ length: numPages }, (_, i) => i + 1) : [];
