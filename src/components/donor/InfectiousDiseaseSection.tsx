@@ -81,36 +81,25 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
   // Extract test results from extracted_data
   const testResults = Object.entries(extractedData)
     .filter(([key, value]) => {
-      // Filter out non-test fields (like test dates, etc.)
-      if (key.startsWith('Test_') || (typeof value === 'object' && value !== null && !Array.isArray(value))) {
-        return true;
-      }
-      // Include simple key-value pairs that look like test results
-      if (typeof value === 'string' && value.length > 0) {
+      // Filter for test objects (Test_1, Test_2, etc.) or any object that looks like a test
+      if (key.startsWith('Test_') && typeof value === 'object' && value !== null && !Array.isArray(value)) {
         return true;
       }
       return false;
     })
     .map(([key, value]) => {
       if (key.startsWith('Test_') && typeof value === 'object' && value !== null) {
-        // This is a structured test object
+        // This is a structured test object - handle both underscore and space-separated keys
+        const testData = value as any;
+        // Format test name: Test_1 -> Test 1
+        const formattedTestName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         return {
-          testName: (value as any)['Test Name'] || key,
-          result: (value as any)['Test Result'] || (value as any)['Result'] || '-',
-          specimenDate: (value as any)['Specimen Date-Time'] || (value as any)['Specimen Date'] || '-',
-          specimenType: (value as any)['Specimen Type'] || '-',
-          testMethod: (value as any)['Test Method'] || '-',
-          comments: (value as any)['Comments'] || '-',
-        };
-      } else if (typeof value === 'string' && value.length > 0) {
-        // This is a simple key-value test result
-        return {
-          testName: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          result: value,
-          specimenDate: '-',
-          specimenType: '-',
-          testMethod: '-',
-          comments: '-',
+          testName: formattedTestName, // Use formatted name (Test 1, Test 2, etc.)
+          result: testData['Test_Result'] || testData['Test Result'] || testData['Result'] || '-',
+          specimenDate: testData['Specimen_Date_Time'] || testData['Specimen Date-Time'] || testData['Specimen_Date'] || testData['Specimen Date'] || '-',
+          specimenType: testData['Specimen_Type'] || testData['Specimen Type'] || '-',
+          testMethod: testData['Test_Method'] || testData['Test Method'] || '-',
+          comments: testData['Comments'] || testData['Comment'] || '-',
         };
       }
       return null;
