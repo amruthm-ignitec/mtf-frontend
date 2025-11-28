@@ -5,8 +5,10 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 // Set up PDF.js worker - must match react-pdf's internal pdfjs-dist version (5.4.296)
 // react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally, so we must use the same version
+// CRITICAL: Set worker synchronously at module load time, before any imports use it
 // Using CDN URL to ensure version compatibility and avoid module resolution issues
-if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+if (typeof window !== 'undefined') {
+  // Always set it, don't check if it exists - ensures it's set before react-pdf initializes
   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs`;
 }
 
@@ -23,6 +25,13 @@ export default function PDFViewerWithPage({
   onClose,
   documentName,
 }: PDFViewerWithPageProps) {
+  // Ensure worker is set before component renders - critical for PDF.js initialization
+  useEffect(() => {
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs`;
+    }
+  }, []);
+
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(pageNumber);
   const [loading, setLoading] = useState(true);
