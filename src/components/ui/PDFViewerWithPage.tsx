@@ -1,15 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Import PDF.js worker using Vite's ?url syntax - this is the recommended approach for Vite
-// This ensures Vite properly resolves and bundles the worker file
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-// Set up PDF.js worker - must be set synchronously before any Document components are rendered
-// This is critical - the worker must be configured before react-pdf tries to use it
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+// Set up PDF.js worker - must match react-pdf's internal pdfjs-dist version (5.4.296)
+// react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally, so we must use the same version
+// Using CDN URL to ensure version compatibility and avoid module resolution issues
+if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/build/pdf.worker.min.mjs`;
+}
 
 interface PDFViewerWithPageProps {
   pdfUrl: string;
@@ -141,6 +140,13 @@ export default function PDFViewerWithPage({
   // Calculate width for sidebar (approximately 1/3 of screen)
   const pageWidth = Math.min(600, window.innerWidth * 0.3);
 
+  // Memoize PDF.js options to prevent unnecessary reloads
+  const pdfOptions = useMemo(() => ({
+    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/standard_fonts/',
+  }), []);
+
   // Render all pages for full document navigation
   const pagesToRender = numPages ? Array.from({ length: numPages }, (_, i) => i + 1) : [];
 
@@ -167,11 +173,7 @@ export default function PDFViewerWithPage({
                   <span className="ml-2 text-sm text-gray-600">Loading PDF...</span>
                 </div>
               }
-              options={{
-                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/cmaps/',
-                cMapPacked: true,
-                standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.296/standard_fonts/',
-              }}
+              options={pdfOptions}
             >
               {loading && numPages === null ? null : pagesToRender.map((pageNum) => {
                 const isTargetPage = pageNum === currentPage;
