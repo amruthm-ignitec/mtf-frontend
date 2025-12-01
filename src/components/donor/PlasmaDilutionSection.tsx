@@ -14,6 +14,23 @@ export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaD
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
   
+  // Check if there's any meaningful data to display
+  const hasSummary = summary && Object.keys(summary).length > 0;
+  const hasExtractedData = extractedData && Object.keys(extractedData).length > 0;
+  const hasPages = pages && pages.length > 0;
+  
+  // If no data is available, show empty state
+  if (!hasSummary && !hasExtractedData && !hasPages) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Plasma Dilution</h2>
+          <p className="text-sm text-gray-500">No plasma dilution data available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
+  
   // Helper function to extract page number and document_id from citation
   const getCitationInfo = (citation: any): { page: number; documentId?: number } => {
     if (typeof citation === 'object' && citation !== null && 'page' in citation) {

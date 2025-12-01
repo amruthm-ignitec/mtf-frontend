@@ -1,7 +1,5 @@
-import React from 'react';
 import { ConditionalDocuments } from '../../types/extraction';
-import { FlaskConical, TestTube, FileSearch, AlertCircle } from 'lucide-react';
-import StatusBadge from '../ui/StatusBadge';
+import { FlaskConical, TestTube, FileSearch } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 
@@ -15,6 +13,21 @@ export default function ConditionalDocumentsSection({
   onCitationClick,
 }: ConditionalDocumentsSectionProps) {
   const { bioburden_results, toxicology_report, autopsy_report } = data;
+  
+  // Check if any conditional documents are present
+  const hasAnyDocuments = !!(bioburden_results || toxicology_report || autopsy_report);
+  
+  // If no conditional documents, show empty state
+  if (!hasAnyDocuments) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Conditional Documents</h2>
+          <p className="text-sm text-gray-500">No conditional documents required or available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
 
   const getConditionalStatusColor = (status: string) => {
     if (status.includes('CONDITION NOT MET')) {
@@ -82,11 +95,12 @@ export default function ConditionalDocumentsSection({
             {bioburden_results.source_document && bioburden_results.source_pages && bioburden_results.source_pages.length > 0 && (() => {
               const firstPage = bioburden_results.source_pages[0];
               const page = typeof firstPage === 'object' && firstPage !== null && 'page' in firstPage
-                ? firstPage.page
+                ? (firstPage as any).page
                 : (typeof firstPage === 'number' ? firstPage : parseInt(String(firstPage), 10) || 1);
-              const documentId = typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
-                ? firstPage.document_id
-                : (bioburden_results as any).document_id;
+              const documentId =
+                typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
+                  ? (firstPage as any).document_id
+                  : (bioburden_results as any).document_id;
               return (
                 <div className="mt-4">
                   <CitationBadge
@@ -132,11 +146,12 @@ export default function ConditionalDocumentsSection({
             {toxicology_report.source_document && toxicology_report.source_pages && toxicology_report.source_pages.length > 0 && (() => {
               const firstPage = toxicology_report.source_pages[0];
               const page = typeof firstPage === 'object' && firstPage !== null && 'page' in firstPage
-                ? firstPage.page
+                ? (firstPage as any).page
                 : (typeof firstPage === 'number' ? firstPage : parseInt(String(firstPage), 10) || 1);
-              const documentId = typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
-                ? firstPage.document_id
-                : (toxicology_report as any).document_id;
+              const documentId =
+                typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
+                  ? (firstPage as any).document_id
+                  : (toxicology_report as any).document_id;
               return (
                 <div className="mt-4">
                   <CitationBadge
@@ -204,11 +219,12 @@ export default function ConditionalDocumentsSection({
             {autopsy_report.source_document && autopsy_report.source_pages && autopsy_report.source_pages.length > 0 && (() => {
               const firstPage = autopsy_report.source_pages[0];
               const page = typeof firstPage === 'object' && firstPage !== null && 'page' in firstPage
-                ? firstPage.page
+                ? (firstPage as any).page
                 : (typeof firstPage === 'number' ? firstPage : parseInt(String(firstPage), 10) || 1);
-              const documentId = typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
-                ? firstPage.document_id
-                : (autopsy_report as any).document_id;
+              const documentId =
+                typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
+                  ? (firstPage as any).document_id
+                  : (autopsy_report as any).document_id;
               return (
                 <div className="mt-4">
                   <CitationBadge

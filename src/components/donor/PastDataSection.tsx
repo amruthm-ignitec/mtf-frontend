@@ -95,7 +95,7 @@ export default function PastDataSection({ data, loading }: PastDataSectionProps)
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mt-1">
                     <User className="w-3 h-3" />
-                    <span>{decision.approver_name || decision.approver_email || 'Unknown'}</span>
+                    <span>{decision.approver_name || decision.approver_email || '-'}</span>
                     <span>•</span>
                     <span>{new Date(decision.created_at).toLocaleString()}</span>
                   </div>

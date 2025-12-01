@@ -14,6 +14,29 @@ export default function DRAISection({ data, onCitationClick }: DRAISectionProps)
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
   
+  // Check if there's any meaningful data to display
+  const hasSummary = summary && Object.keys(summary).length > 0;
+  const hasMedicalHistory = extractedData?.Medical_History;
+  const hasSocialHistory = extractedData?.Social_History;
+  const hasRiskFactors = extractedData?.Risk_Factors;
+  const hasAdditionalInfo = extractedData?.Additional_Information;
+  const hasOtherData = extractedData && Object.keys(extractedData).filter(key => 
+    !['Medical_History', 'Social_History', 'Risk_Factors', 'Additional_Information'].includes(key)
+  ).length > 0;
+  const hasPages = pages && pages.length > 0;
+  
+  // If no data is available, show empty state
+  if (!hasSummary && !hasMedicalHistory && !hasSocialHistory && !hasRiskFactors && !hasAdditionalInfo && !hasOtherData && !hasPages) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Donor Risk Assessment Interview (DRAI)</h2>
+          <p className="text-sm text-gray-500">No DRAI data available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
+  
   // Helper function to extract page number and document_id from citation
   const getCitationInfo = (citation: any): { page: number; documentId?: number } => {
     if (typeof citation === 'object' && citation !== null && 'page' in citation) {

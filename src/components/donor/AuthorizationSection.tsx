@@ -33,6 +33,26 @@ export default function AuthorizationSection({ data, onCitationClick }: Authoriz
   const date = extractedData?.Date || summary?.Date || '-';
   const type = extractedData?.Type || summary?.Type || '-';
   const conditions = extractedData?.Conditions || summary?.Conditions || '-';
+  
+  // Check if there's any meaningful data to display
+  const hasFormInfo = (type && type !== '-') || (conditions && conditions !== '-');
+  const hasAuthorizer = authorizer && authorizer !== '-';
+  const hasDate = date && date !== '-';
+  const hasSummary = summary && Object.keys(summary).length > 0;
+  const hasExtractedData = extractedData && Object.keys(extractedData).length > 0;
+  const hasPages = pages && pages.length > 0;
+  
+  // If no data is available, show empty state
+  if (!hasFormInfo && !hasAuthorizer && !hasDate && !hasSummary && !hasExtractedData && !hasPages) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authorization & Consent</h2>
+          <p className="text-sm text-gray-500">No authorization data available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -17,6 +17,25 @@ export default function PhysicalAssessmentSection({
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
   
+  // Check if there's any meaningful data to display
+  const hasSummary = summary && Object.keys(summary).length > 0;
+  const hasExtractedData = extractedData && Object.keys(extractedData).length > 0 && 
+    (extractedData.Height || extractedData.Weight || extractedData.BMI || 
+     Object.keys(extractedData).some(key => !['Height', 'Weight', 'BMI'].includes(key) && extractedData[key]));
+  const hasPages = pages && pages.length > 0;
+  
+  // If no data is available, show empty state
+  if (!hasSummary && !hasExtractedData && !hasPages) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Physical Assessment</h2>
+          <p className="text-sm text-gray-500">No physical assessment data available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
+  
   // Helper function to extract page number and document_id from citation
   const getCitationInfo = (citation: any): { page: number; documentId?: number } => {
     if (typeof citation === 'object' && citation !== null && 'page' in citation) {

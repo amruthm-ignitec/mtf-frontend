@@ -192,7 +192,7 @@ export default function Summary() {
             name: donorFromState.name || `Donor ${id}`,
             age: donorFromState.age || extractionDataResponse.extracted_data?.donor_information?.extracted_data?.Age ? 
               Number(extractionDataResponse.extracted_data.donor_information.extracted_data.Age) : null,
-            gender: donorFromState.gender || extractionDataResponse.extracted_data?.donor_information?.extracted_data?.Gender || 'Unknown',
+            gender: donorFromState.gender || extractionDataResponse.extracted_data?.donor_information?.extracted_data?.Gender || null,
             causeOfDeath: extractionDataResponse.terminal_information?.cause_of_death || null,
             uploadTimestamp: donorFromState.created_at || extractionDataResponse.processing_timestamp || new Date().toISOString(),
             requiredDocuments: [],
@@ -206,7 +206,7 @@ export default function Summary() {
             donorName: extractionDataResponse.donor_id ? `Donor ${extractionDataResponse.donor_id}` : `Donor ${id}`,
             name: extractionDataResponse.donor_id ? `Donor ${extractionDataResponse.donor_id}` : `Donor ${id}`,
             age: donorInfo.Age ? Number(donorInfo.Age) : null,
-            gender: donorInfo.Gender || 'Unknown',
+            gender: donorInfo.Gender || null,
             causeOfDeath: extractionDataResponse.terminal_information?.cause_of_death || null,
             uploadTimestamp: extractionDataResponse.processing_timestamp || new Date().toISOString(),
             requiredDocuments: [],
@@ -257,7 +257,7 @@ export default function Summary() {
           donorName: donorFromState?.name || `Donor ${id}`,
           name: donorFromState?.name || `Donor ${id}`,
           age: donorFromState?.age || null,
-          gender: donorFromState?.gender || 'Unknown',
+          gender: donorFromState?.gender || null,
           causeOfDeath: null,
           uploadTimestamp: donorFromState?.created_at || new Date().toISOString(),
           requiredDocuments: [],
@@ -776,6 +776,26 @@ export default function Summary() {
         );
 
       case 'clinical':
+        // Check if any clinical data is available
+        const hasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
+        const hasSerologyFallback = extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type;
+        const hasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
+        const hasMedicalHistory = extractionData?.extracted_data?.medical_records_review_summary;
+        const hasDRAI = extractionData?.extracted_data?.donor_risk_assessment_interview;
+        const hasTerminalInfo = extractionData?.terminal_information;
+        
+        // If no clinical data is available, show empty state
+        if (!hasSerology && !hasSerologyFallback && !hasCulture && !hasMedicalHistory && !hasDRAI && !hasTerminalInfo) {
+          return (
+            <Card className="p-6">
+              <div className="text-center py-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Clinical Information</h2>
+                <p className="text-sm text-gray-500">No clinical data available for this donor.</p>
+              </div>
+            </Card>
+          );
+        }
+        
         return (
           <div className="grid grid-cols-2 gap-6">
             {/* Left Column */}
@@ -1208,11 +1228,9 @@ export default function Summary() {
       }
     }
     
-    // Final fallback: Use local PDF (for old data or missing documents)
-    const localPdfUrl = '/chart-review-document.pdf';
-    setSelectedPdfUrl(localPdfUrl);
-    setSelectedPageNumber(pageNumber || undefined);
-    setSelectedDocumentName(sourceDocument || 'Initial and Conditional documents for chart review');
+    // No document found - do not open PDF viewer
+    // Log for debugging but don't show hardcoded fallback
+    console.warn('No document found for citation:', { sourceDocument, pageNumber, documentId });
   };
 
   if (!donor) return null;

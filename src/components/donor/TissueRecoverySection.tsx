@@ -10,10 +10,21 @@ interface TissueRecoverySectionProps {
 }
 
 export default function TissueRecoverySection({ data, eligibilityData, onCitationClick }: TissueRecoverySectionProps) {
+  // Check if data exists and has meaningful content
+  const hasSummary = data?.summary && (
+    data.summary['Tissues Recovered'] || 
+    data.summary['Recovery Procedures'] || 
+    data.summary['Timing'] || 
+    data.summary['Special Handling']
+  );
+  const hasExtractedData = data?.extracted_data && Object.keys(data.extracted_data).length > 0;
+  const hasPages = data?.pages && data.pages.length > 0;
+  const hasRecoveryData = hasSummary || hasExtractedData || hasPages;
+  
   return (
     <div className="space-y-6">
-      {/* Tissue Recovery Information - Show if available */}
-      {data && (
+      {/* Tissue Recovery Information - Show if available and has content */}
+      {data && hasRecoveryData && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Tissue Recovery Information</h3>
           <div className="space-y-4">
@@ -96,9 +107,12 @@ export default function TissueRecoverySection({ data, eligibilityData, onCitatio
       )}
       
       {/* Show message if neither data nor eligibility is available */}
-      {!data && (!eligibilityData || eligibilityData.length === 0) && (
+      {!hasRecoveryData && (!eligibilityData || eligibilityData.length === 0) && (
         <Card className="p-6">
-          <p className="text-gray-500">Tissue recovery and eligibility data not available.</p>
+          <div className="text-center py-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Tissue Recovery</h2>
+            <p className="text-sm text-gray-500">No tissue recovery and eligibility data available for this donor.</p>
+          </div>
         </Card>
       )}
     </div>

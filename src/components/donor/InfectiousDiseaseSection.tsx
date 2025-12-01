@@ -53,6 +53,29 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
   };
 
   const testFields = other_tests ? Object.values(other_tests).filter((field) => field) : [];
+  
+  // Check if there's any meaningful data to display
+  const hasSummary = summary && Object.keys(summary).length > 0;
+  const hasTestResults = testResults.length > 0;
+  const hasSerologyReport = !!serology_report;
+  const hasSerologyResults = serologyResults && Object.keys(serologyResults).length > 0;
+  const hasCultureResults = cultureResults && cultureResults.length > 0;
+  const hasCriticalLabValues = criticalLabValues && Object.keys(criticalLabValues).length > 0;
+  const hasOtherTests = other_tests && Object.keys(other_tests).length > 0;
+  const hasPages = pages && pages.length > 0;
+  
+  // Aggregate check: if no data sources have content, show empty state
+  if (!hasSummary && !hasTestResults && !hasSerologyReport && !hasSerologyResults && 
+      !hasCultureResults && !hasCriticalLabValues && !hasOtherTests && !hasPages) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Infectious Disease Testing</h2>
+          <p className="text-sm text-gray-500">No infectious disease testing data available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
 
   // Helper function to format value for display
   const formatValue = (value: any): string => {
