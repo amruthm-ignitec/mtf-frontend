@@ -17,6 +17,18 @@ export default function PhysicalAssessmentSection({
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
   
+  // If component is explicitly marked as not present, show empty state
+  if (data?.present === false) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Physical Assessment</h2>
+          <p className="text-sm text-gray-500">No physical assessment data available for this donor.</p>
+        </div>
+      </Card>
+    );
+  }
+  
   // Check if there's any meaningful data to display
   const hasSummary = summary && Object.keys(summary).length > 0;
   const hasExtractedData = extractedData && Object.keys(extractedData).length > 0 && 
