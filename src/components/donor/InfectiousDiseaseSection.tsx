@@ -54,6 +54,34 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
 
   const testFields = other_tests ? Object.values(other_tests).filter((field) => field) : [];
   
+  // Extract test results from extracted_data (needed for empty-state check)
+  const testResults = Object.entries(extractedData)
+    .filter(([key, value]) => {
+      // Filter for test objects (Test_1, Test_2, etc.) or any object that looks like a test
+      if (key.startsWith('Test_') && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return true;
+      }
+      return false;
+    })
+    .map(([key, value]) => {
+      if (key.startsWith('Test_') && typeof value === 'object' && value !== null) {
+        // This is a structured test object - handle both underscore and space-separated keys
+        const testData = value as any;
+        // Format test name: Test_1 -> Test 1
+        const formattedTestName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return {
+          testName: formattedTestName, // Use formatted name (Test 1, Test 2, etc.)
+          result: testData['Test_Result'] || testData['Test Result'] || testData['Result'] || '-',
+          specimenDate: testData['Specimen_Date_Time'] || testData['Specimen Date-Time'] || testData['Specimen_Date'] || testData['Specimen Date'] || '-',
+          specimenType: testData['Specimen_Type'] || testData['Specimen Type'] || '-',
+          testMethod: testData['Test_Method'] || testData['Test Method'] || '-',
+          comments: testData['Comments'] || testData['Comment'] || '-',
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+  
   // Check if there's any meaningful data to display
   const hasSummary = summary && Object.keys(summary).length > 0;
   const hasTestResults = testResults.length > 0;
@@ -100,34 +128,6 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
     }
     return String(value);
   };
-
-  // Extract test results from extracted_data
-  const testResults = Object.entries(extractedData)
-    .filter(([key, value]) => {
-      // Filter for test objects (Test_1, Test_2, etc.) or any object that looks like a test
-      if (key.startsWith('Test_') && typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        return true;
-      }
-      return false;
-    })
-    .map(([key, value]) => {
-      if (key.startsWith('Test_') && typeof value === 'object' && value !== null) {
-        // This is a structured test object - handle both underscore and space-separated keys
-        const testData = value as any;
-        // Format test name: Test_1 -> Test 1
-        const formattedTestName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        return {
-          testName: formattedTestName, // Use formatted name (Test 1, Test 2, etc.)
-          result: testData['Test_Result'] || testData['Test Result'] || testData['Result'] || '-',
-          specimenDate: testData['Specimen_Date_Time'] || testData['Specimen Date-Time'] || testData['Specimen_Date'] || testData['Specimen Date'] || '-',
-          specimenType: testData['Specimen_Type'] || testData['Specimen Type'] || '-',
-          testMethod: testData['Test_Method'] || testData['Test Method'] || '-',
-          comments: testData['Comments'] || testData['Comment'] || '-',
-        };
-      }
-      return null;
-    })
-    .filter(Boolean);
 
   return (
     <div className="space-y-6">
