@@ -777,15 +777,22 @@ export default function Summary() {
 
       case 'clinical':
         // Check if any clinical data is available
-        const hasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
-        const hasSerologyFallback = extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type;
-        const hasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
-        const hasMedicalHistory = extractionData?.extracted_data?.medical_records_review_summary;
-        const hasDRAI = extractionData?.extracted_data?.donor_risk_assessment_interview;
-        const hasTerminalInfo = extractionData?.terminal_information;
+        const clinicalHasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
+        const clinicalHasSerologyFallback = extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type;
+        const clinicalHasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
+        const clinicalHasMedicalHistory = extractionData?.extracted_data?.medical_records_review_summary;
+        const clinicalHasDRAI = extractionData?.extracted_data?.donor_risk_assessment_interview;
+        const clinicalHasTerminalInfo = extractionData?.terminal_information;
         
         // If no clinical data is available, show empty state
-        if (!hasSerology && !hasSerologyFallback && !hasCulture && !hasMedicalHistory && !hasDRAI && !hasTerminalInfo) {
+        if (
+          !clinicalHasSerology &&
+          !clinicalHasSerologyFallback &&
+          !clinicalHasCulture &&
+          !clinicalHasMedicalHistory &&
+          !clinicalHasDRAI &&
+          !clinicalHasTerminalInfo
+        ) {
           return (
             <Card className="p-6">
               <div className="text-center py-8">
