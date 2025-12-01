@@ -495,31 +495,35 @@ export default function Summary() {
                 }
               ];
 
-              // Conditional documents
+              // Conditional documents - map to topic results
               const conditionalDocuments = [
                 {
                   name: 'Autopsy report',
-                  condition: 'Autopsy Performed',
+                  condition: 'Autopsy',  // Topic name
                   extractionKey: 'autopsy_report',
-                  displayName: 'Autopsy report'
+                  displayName: 'Autopsy report',
+                  topicName: 'Autopsy'
                 },
                 {
                   name: 'Toxicology report',
-                  condition: 'Toxicology Performed',
+                  condition: 'Toxicology',  // Topic name
                   extractionKey: 'toxicology_report',
-                  displayName: 'Toxicology report'
+                  displayName: 'Toxicology report',
+                  topicName: 'Toxicology'
                 },
                 {
                   name: 'Skin Dermal Cultures',
-                  condition: 'Skin Recovery Performed',
+                  condition: 'Prep',  // Topic name
                   extractionKey: 'skin_dermal_cultures',
-                  displayName: 'Skin Dermal Cultures'
+                  displayName: 'Skin Dermal Cultures',
+                  topicName: 'Prep'
                 },
                 {
                   name: 'Bioburden results',
-                  condition: 'Fresh Tissue Processed Performed',
+                  condition: 'Prep',  // Topic name
                   extractionKey: 'bioburden_results',
-                  displayName: 'Bioburden results'
+                  displayName: 'Bioburden results',
+                  topicName: 'Prep'
                 }
               ];
 
@@ -530,28 +534,45 @@ export default function Summary() {
                 return section?.present === true;
               };
 
-              // Check conditional document status
-              const getConditionalStatus = (extractionKey: string) => {
-                if (!extractionData?.conditional_documents) return null;
-                
-                const conditionalDocs = extractionData.conditional_documents as any;
-                let doc: any = null;
-                
-                if (extractionKey === 'autopsy_report') {
-                  doc = conditionalDocs.autopsy_report;
-                } else if (extractionKey === 'toxicology_report') {
-                  doc = conditionalDocs.toxicology_report;
-                } else if (extractionKey === 'skin_dermal_cultures') {
-                  doc = conditionalDocs.skin_dermal_cultures || conditionalDocs.skinDermalCultures;
-                } else if (extractionKey === 'bioburden_results') {
-                  doc = conditionalDocs.bioburden_results;
+              // Check conditional document status - uses conditional_documents first, falls back to topic results
+              const getConditionalStatus = (extractionKey: string, topicName?: string) => {
+                // First, check conditional_documents from backend
+                if (extractionData?.conditional_documents) {
+                  const conditionalDocs = extractionData.conditional_documents as any;
+                  let doc: any = null;
+                  
+                  if (extractionKey === 'autopsy_report') {
+                    doc = conditionalDocs.autopsy_report;
+                  } else if (extractionKey === 'toxicology_report') {
+                    doc = conditionalDocs.toxicology_report;
+                  } else if (extractionKey === 'skin_dermal_cultures') {
+                    doc = conditionalDocs.skin_dermal_cultures || conditionalDocs.skinDermalCultures;
+                  } else if (extractionKey === 'bioburden_results') {
+                    doc = conditionalDocs.bioburden_results;
+                  }
+                  
+                  if (doc) {
+                    const status = doc.conditional_status;
+                    if (status && typeof status === 'string') {
+                      return status.includes('CONDITION MET') ? 'met' : 'not_met';
+                    }
+                  }
                 }
                 
-                if (!doc) return null;
-                
-                const status = doc.conditional_status;
-                if (status && typeof status === 'string') {
-                  return status.includes('CONDITION MET') ? 'met' : 'not_met';
+                // Fallback: Check topic results if topicName is provided
+                if (topicName && extractionData?.topics) {
+                  const topicResult = extractionData.topics[topicName];
+                  if (topicResult) {
+                    const decision = topicResult.decision?.toLowerCase();
+                    const conditionResult = topicResult.condition_result?.toLowerCase();
+                    
+                    // For "done_or_not" topics, check if decision is "Yes"
+                    if (decision === 'yes' || conditionResult === 'positive' || conditionResult === 'yes') {
+                      return 'met';
+                    } else if (decision === 'no' || conditionResult === 'negative' || conditionResult === 'no') {
+                      return 'not_met';
+                    }
+                  }
                 }
                 
                 return null;
@@ -606,9 +627,14 @@ export default function Summary() {
 
                     {/* Conditional Documents */}
                     {conditionalDocuments.map((item, index) => {
-                      const conditionalStatus = getConditionalStatus(item.extractionKey);
+                      const conditionalStatus = getConditionalStatus(item.extractionKey, item.topicName);
                       const isPresent = conditionalStatus === 'met';
                       const reviewerInfo = getReviewerInfo(item.displayName);
+                      
+                      // Format condition display - show topic name with "Performed" suffix for display
+                      const conditionDisplay = item.condition === 'Prep' 
+                        ? 'Fresh Tissue Processed' 
+                        : `${item.condition} Performed`;
                       
                       return (
                         <div
@@ -617,7 +643,7 @@ export default function Summary() {
                             isPresent ? 'bg-gray-50' : 'bg-gray-50 opacity-60'
                           }`}
                         >
-                          <span className="text-sm text-gray-900">{item.displayName} | {item.condition}</span>
+                          <span className="text-sm text-gray-900">{item.displayName} | {conditionDisplay}</span>
                           <div className="flex items-center gap-3">
                             {isPresent && reviewerInfo && (
                               <>

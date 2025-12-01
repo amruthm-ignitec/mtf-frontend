@@ -29,6 +29,7 @@ interface TissueEligibilityAnalysisProps {
   eligibilityData?: TissueEligibility[];
 }
 
+// POC: Only Femur and Skin & Soft Tissue
 const mockTissueEligibility: TissueEligibility[] = [
   {
     id: 'ms1',
