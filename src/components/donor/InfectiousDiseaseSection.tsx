@@ -187,14 +187,13 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 ? resultData.method
                 : null;
               
-              const resultStr = String(resultValue).toLowerCase();
-              // Check for positive/reactive but exclude non-reactive, nonreactive, negative
-              const isPositive = (resultStr.includes('positive') || 
-                                 (resultStr.includes('reactive') && 
-                                  !resultStr.includes('non-reactive') && 
-                                  !resultStr.includes('nonreactive'))) &&
-                                 !resultStr.includes('negative') &&
-                                 !resultStr.includes('neg');
+              const resultStr = String(resultValue).toLowerCase().trim();
+              // First check for negative patterns - if found, it's NOT positive
+              const negativePatterns = ['non-reactive', 'non reactive', 'nonreactive', 'negative', 'neg'];
+              const isNegative = negativePatterns.some(pattern => resultStr.includes(pattern));
+              
+              // Only check for positive if it's not negative
+              const isPositive = !isNegative && (resultStr.includes('positive') || resultStr.includes('reactive'));
               
               return (
                 <div
@@ -363,14 +362,13 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                           ? resultData.method
                           : null;
                         
-                        const resultStr = String(resultValue).toLowerCase();
-                        // Check for positive/reactive but exclude non-reactive, nonreactive, negative
-                        const isPositive = (resultStr.includes('positive') || 
-                                           (resultStr.includes('reactive') && 
-                                            !resultStr.includes('non-reactive') && 
-                                            !resultStr.includes('nonreactive'))) &&
-                                           !resultStr.includes('negative') &&
-                                           !resultStr.includes('neg');
+                        const resultStr = String(resultValue).toLowerCase().trim();
+                        // First check for negative patterns - if found, it's NOT positive
+                        const negativePatterns = ['non-reactive', 'non reactive', 'nonreactive', 'negative', 'neg'];
+                        const isNegative = negativePatterns.some(pattern => resultStr.includes(pattern));
+                        
+                        // Only check for positive if it's not negative
+                        const isPositive = !isNegative && (resultStr.includes('positive') || resultStr.includes('reactive'));
                         return (
                           <div
                             key={testName}
