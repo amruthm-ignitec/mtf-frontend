@@ -170,6 +170,40 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
         </Card>
       )}
 
+      {/* Infectious Disease Serology Section - Display all serology results */}
+      {serologyResults && Object.keys(serologyResults).length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <FlaskConical className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Infectious Disease Serology</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(serologyResults).map(([testName, result]) => {
+              const resultStr = String(result).toLowerCase();
+              const isReactive = resultStr.includes('reactive') || resultStr.includes('positive');
+              
+              return (
+                <div
+                  key={testName}
+                  className="bg-white rounded-lg border border-gray-200 p-3"
+                >
+                  <div className="text-xs font-medium text-gray-700 mb-1.5">
+                    {testName}
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                    isReactive 
+                      ? 'bg-red-100 text-red-700 border border-red-200' 
+                      : 'bg-green-100 text-green-700 border border-green-200'
+                  }`}>
+                    {String(result)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* Test Results from Extracted Data - New Backend Structure */}
       {testResults.length > 0 && (
         <Card className="p-8">
@@ -300,29 +334,22 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 </div>
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-5 flex-1">
                   {serologyResults && Object.keys(serologyResults).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-3 h-full">
+                    <div className="grid grid-cols-2 gap-4 h-full">
                       {Object.entries(serologyResults).map(([testName, result]) => {
                         const resultStr = String(result).toLowerCase();
                         const isReactive = resultStr.includes('reactive') || resultStr.includes('positive');
                         return (
                           <div
                             key={testName}
-                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                              isReactive
-                                ? 'bg-white border-orange-200 hover:border-orange-300'
-                                : 'bg-white border-green-200 hover:border-green-300'
-                            }`}
+                            className="bg-white rounded-lg border border-gray-200 p-3"
                           >
-                            <span className="text-sm font-medium text-gray-700">{testName}</span>
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${
-                                isReactive ? 'bg-orange-500' : 'bg-green-500'
-                              }`}></div>
-                              <span className={`text-sm font-semibold ${
-                                isReactive ? 'text-orange-600' : 'text-green-600'
-                              }`}>
-                                {String(result)}
-                              </span>
+                            <div className="text-xs font-medium text-gray-700 mb-1.5">
+                              {testName}
+                            </div>
+                            <div className={`text-sm font-semibold ${
+                              isReactive ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {String(result)}
                             </div>
                           </div>
                         );
@@ -342,43 +369,45 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 </div>
                 <div className="space-y-4 flex-1">
                   {cultureResults && cultureResults.length > 0 ? (
-                    cultureResults.slice(0, 2).map((culture, idx) => {
+                    cultureResults.map((culture, idx) => {
                       const hasGrowth = culture.microorganism && 
                         culture.microorganism.toLowerCase() !== 'no growth' && 
                         culture.microorganism.toLowerCase() !== 'negative';
+                      const microorganism = culture.microorganism || 'No Growth';
+                      
                       return (
                         <div 
                           key={idx}
-                          className={`bg-gradient-to-br rounded-xl border p-5 ${
-                            hasGrowth 
-                              ? 'from-red-50 to-white border-red-200' 
-                              : 'from-green-50 to-white border-green-200'
-                          }`}
+                          className="bg-white rounded-lg border border-gray-200 p-4"
                         >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h5 className="text-sm font-semibold text-gray-900 mb-1">
-                                {culture.tissue_location || 'Culture'}
-                              </h5>
-                              {culture.source_page && (
-                                <p className="text-xs text-gray-500">Page {culture.source_page}</p>
-                              )}
-                            </div>
-                            <div className={`px-2.5 py-1 rounded-full ${
-                              hasGrowth ? 'bg-red-100' : 'bg-green-100'
-                            }`}>
-                              <span className={`text-xs font-semibold ${
-                                hasGrowth ? 'text-red-700' : 'text-green-700'
-                              }`}>
-                                {culture.microorganism || 'No Growth'}
-                              </span>
-                            </div>
+                          <div className="text-xs font-semibold text-gray-900 mb-2">
+                            {culture.tissue_location || 'Culture'}
                           </div>
+                          <div className={`text-sm font-semibold mb-1 ${
+                            hasGrowth ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                            {microorganism}
+                          </div>
+                          {(culture as any).collection_date && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Collected: {(culture as any).collection_date}
+                            </div>
+                          )}
+                          {(culture as any).preliminary_result && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {(culture as any).preliminary_result}
+                            </div>
+                          )}
+                          {(culture as any).status && (culture as any).status.toLowerCase() === 'pending' && (
+                            <div className="text-xs text-orange-600 font-medium mt-1">
+                              Pending
+                            </div>
+                          )}
                         </div>
                       );
                     })
                   ) : (
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-5">
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
                       <p className="text-sm text-gray-500">No culture results available</p>
                     </div>
                   )}

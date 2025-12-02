@@ -373,37 +373,29 @@ export default function DonorManagement() {
           return <span className="text-xs text-gray-400">—</span>;
         }
         
-        // Check if documents are still processing
-        const hasProcessingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'processing');
-        const hasUploadedDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status !== 'missing');
+        // Get the processing status
+        const status = donor.processingStatus || 'pending';
         
-        // Processing is complete if backend status is completed, failed, or rejected
-        // These statuses indicate processing has finished (successfully or not)
-        const isProcessingComplete = donor.processingStatus === 'completed' || 
-                                     donor.processingStatus === 'failed' || 
-                                     donor.processingStatus === 'rejected';
+        // Show "please check later" message if status is Pending or Processing
+        const isPendingOrProcessing = status === 'pending' || status === 'processing';
         
-        // Show queue message only if:
-        // 1. Processing is NOT complete (status is 'processing' or 'pending'), AND
-        // 2. There are documents uploaded (so we know something is being processed)
-        const isProcessing = !isProcessingComplete && 
-                             (donor.processingStatus === 'processing' || donor.processingStatus === 'pending') && 
-                             hasUploadedDocs;
+        // Only show missing documents if status is Failed or Completed
+        const shouldShowMissingDocs = status === 'failed' || status === 'completed';
         
         // Check for missing documents
         const hasMissingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'missing');
         
         return (
           <div className="space-y-2 min-w-[250px]">
-            {isProcessing ? (
+            {isPendingOrProcessing ? (
               <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-yellow-800">
-                  <p className="font-medium mb-1">Documents are currently in queue</p>
-                  <p className="text-yellow-700">Please check back later for status. Missing documents will be shown once processing is complete.</p>
+                  <p className="font-medium mb-1">Documents are currently being processed</p>
+                  <p className="text-yellow-700">Please check back later. Missing documents will be shown once processing is complete.</p>
                 </div>
               </div>
-            ) : hasMissingDocs ? (
+            ) : shouldShowMissingDocs && hasMissingDocs ? (
               <>
                 <div className="flex items-center text-yellow-600 text-sm mb-1">
                   <AlertTriangle className="h-4 w-4 mr-1" />
@@ -422,8 +414,10 @@ export default function DonorManagement() {
                     ))}
                 </div>
               </>
-            ) : (
+            ) : shouldShowMissingDocs && !hasMissingDocs ? (
               <span className="text-xs text-gray-400">All documents present</span>
+            ) : (
+              <span className="text-xs text-gray-400">—</span>
             )}
           </div>
         );
