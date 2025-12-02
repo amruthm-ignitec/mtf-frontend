@@ -820,20 +820,39 @@ export default function Summary() {
                     {extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0 ? (
                       <>
                         <div className="grid grid-cols-2 gap-3">
-                          {Object.entries(extractionData.serology_results.result).slice(0, 4).map(([testName, result]) => {
-                            const resultStr = result ? String(result).toLowerCase() : '';
-                            const isPositive = resultStr.includes('reactive') || resultStr.includes('positive');
+                          {Object.entries(extractionData.serology_results.result).slice(0, 4).map(([testName, resultData]) => {
+                            // Handle both new format (object with result and method) and legacy format (just result string)
+                            const resultValue = typeof resultData === 'object' && resultData !== null && 'result' in resultData
+                              ? resultData.result
+                              : resultData;
+                            const method = typeof resultData === 'object' && resultData !== null && 'method' in resultData
+                              ? resultData.method
+                              : null;
+                            
+                            const resultStr = resultValue ? String(resultValue).toLowerCase() : '';
+                            // Check for positive/reactive but exclude non-reactive, nonreactive, negative
+                            const isPositive = (resultStr.includes('positive') || 
+                                               (resultStr.includes('reactive') && 
+                                                !resultStr.includes('non-reactive') && 
+                                                !resultStr.includes('nonreactive'))) &&
+                                               !resultStr.includes('negative') &&
+                                               !resultStr.includes('neg');
                             return (
                               <div key={testName} className="bg-gray-50 p-2 rounded">
                                 <div className="text-xs text-gray-500 mb-1.5 truncate" title={testName}>
                                   {testName || '-'}
                                 </div>
+                                {method && (
+                                  <div className="text-xs text-gray-400 mb-1 italic truncate" title={method}>
+                                    {method}
+                                  </div>
+                                )}
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
                                   isPositive 
                                     ? 'bg-red-100 text-red-700 border border-red-200' 
                                     : 'bg-green-100 text-green-700 border border-green-200'
                                 }`}>
-                                  {result ? String(result) : '-'}
+                                  {resultValue ? String(resultValue) : '-'}
                                 </span>
                               </div>
                             );
@@ -874,7 +893,13 @@ export default function Summary() {
                                 .slice(0, 6)
                                 .map(([key, value]: [string, any]) => {
                                   const resultStr = value?.result ? String(value.result).toLowerCase() : '';
-                                  const isPositive = resultStr.includes('reactive') || resultStr.includes('positive');
+                                  // Check for positive/reactive but exclude non-reactive, nonreactive, negative
+                                  const isPositive = (resultStr.includes('positive') || 
+                                                     (resultStr.includes('reactive') && 
+                                                      !resultStr.includes('non-reactive') && 
+                                                      !resultStr.includes('nonreactive'))) &&
+                                                     !resultStr.includes('negative') &&
+                                                     !resultStr.includes('neg');
                                   return (
                                     <div key={key} className="bg-gray-50 p-2 rounded">
                                       <div className="text-xs text-gray-500 mb-1.5">{value?.test_name || key || '-'}</div>

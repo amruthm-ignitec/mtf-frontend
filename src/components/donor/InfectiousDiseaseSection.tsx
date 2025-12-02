@@ -177,10 +177,24 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
             <FlaskConical className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">Infectious Disease Serology</h3>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {Object.entries(serologyResults).map(([testName, result]) => {
-              const resultStr = String(result).toLowerCase();
-              const isReactive = resultStr.includes('reactive') || resultStr.includes('positive');
+          <div className="grid grid-cols-3 gap-4">
+            {Object.entries(serologyResults).map(([testName, resultData]) => {
+              // Handle both new format (object with result and method) and legacy format (just result string)
+              const resultValue = typeof resultData === 'object' && resultData !== null && 'result' in resultData
+                ? resultData.result
+                : resultData;
+              const method = typeof resultData === 'object' && resultData !== null && 'method' in resultData
+                ? resultData.method
+                : null;
+              
+              const resultStr = String(resultValue).toLowerCase();
+              // Check for positive/reactive but exclude non-reactive, nonreactive, negative
+              const isPositive = (resultStr.includes('positive') || 
+                                 (resultStr.includes('reactive') && 
+                                  !resultStr.includes('non-reactive') && 
+                                  !resultStr.includes('nonreactive'))) &&
+                                 !resultStr.includes('negative') &&
+                                 !resultStr.includes('neg');
               
               return (
                 <div
@@ -190,12 +204,17 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                   <div className="text-xs font-medium text-gray-700 mb-1.5">
                     {testName}
                   </div>
+                  {method && (
+                    <div className="text-xs text-gray-500 mb-1 italic">
+                      {method}
+                    </div>
+                  )}
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                    isReactive 
+                    isPositive 
                       ? 'bg-red-100 text-red-700 border border-red-200' 
                       : 'bg-green-100 text-green-700 border border-green-200'
                   }`}>
-                    {String(result)}
+                    {String(resultValue)}
                   </span>
                 </div>
               );
@@ -334,10 +353,24 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 </div>
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-5 flex-1">
                   {serologyResults && Object.keys(serologyResults).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-4 h-full">
-                      {Object.entries(serologyResults).map(([testName, result]) => {
-                        const resultStr = String(result).toLowerCase();
-                        const isReactive = resultStr.includes('reactive') || resultStr.includes('positive');
+                    <div className="grid grid-cols-3 gap-4 h-full">
+                      {Object.entries(serologyResults).map(([testName, resultData]) => {
+                        // Handle both new format (object with result and method) and legacy format (just result string)
+                        const resultValue = typeof resultData === 'object' && resultData !== null && 'result' in resultData
+                          ? resultData.result
+                          : resultData;
+                        const method = typeof resultData === 'object' && resultData !== null && 'method' in resultData
+                          ? resultData.method
+                          : null;
+                        
+                        const resultStr = String(resultValue).toLowerCase();
+                        // Check for positive/reactive but exclude non-reactive, nonreactive, negative
+                        const isPositive = (resultStr.includes('positive') || 
+                                           (resultStr.includes('reactive') && 
+                                            !resultStr.includes('non-reactive') && 
+                                            !resultStr.includes('nonreactive'))) &&
+                                           !resultStr.includes('negative') &&
+                                           !resultStr.includes('neg');
                         return (
                           <div
                             key={testName}
@@ -346,10 +379,15 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                             <div className="text-xs font-medium text-gray-700 mb-1.5">
                               {testName}
                             </div>
+                            {method && (
+                              <div className="text-xs text-gray-500 mb-1 italic">
+                                {method}
+                              </div>
+                            )}
                             <div className={`text-sm font-semibold ${
-                              isReactive ? 'text-red-600' : 'text-green-600'
+                              isPositive ? 'text-red-600' : 'text-green-600'
                             }`}>
-                              {String(result)}
+                              {String(resultValue)}
                             </div>
                           </div>
                         );
