@@ -349,7 +349,7 @@ export default function PDFViewerWithPage({
                     key={`page_${pageNum}`}
                     ref={isTargetPage ? pageRef : null}
                     className={`mb-4 ${isTargetPage ? 'ring-2 ring-blue-500 rounded shadow-lg' : ''}`}
-                    style={{ minWidth: 'fit-content' }}
+                    style={{ minWidth: 'fit-content', paddingLeft: '8vh', paddingRight: '2vh' }}
                   >
                     <Page
                       pageNumber={pageNum}
