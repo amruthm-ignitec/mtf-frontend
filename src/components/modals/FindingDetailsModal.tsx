@@ -1,15 +1,17 @@
 import React from 'react';
 import { Finding } from '../../types/donor';
 import { X } from 'lucide-react';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface FindingDetailsModalProps {
   finding: Finding;
   isOpen: boolean;
   onClose: () => void;
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function FindingDetailsModal({ finding, isOpen, onClose, onCitationClick }: FindingDetailsModalProps) {
+export default function FindingDetailsModal({ finding, isOpen, onClose, documents = [], onCitationClick }: FindingDetailsModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -55,17 +57,20 @@ export default function FindingDetailsModal({ finding, isOpen, onClose, onCitati
               <div className="space-y-2">
                 {finding.citations.map((citation) => {
                   const pageNumber = parseInt(citation.pageNumber, 10) || undefined;
+                  const documentName = getDocumentName(documents, citation.documentId);
                   return (
                     <div
                       key={citation.id}
                       className="bg-gray-50 p-3 rounded-md text-sm"
                     >
                       <div className="flex justify-between">
-                        <span>Page {citation.pageNumber}</span>
+                        <span>
+                          {documentName ? `${documentName} - Page ${citation.pageNumber}` : `Page ${citation.pageNumber}`}
+                        </span>
                         {onCitationClick ? (
                           <span 
                             className="text-blue-600 cursor-pointer hover:underline"
-                            onClick={() => onCitationClick('Finding', pageNumber, citation.documentId)}
+                            onClick={() => onCitationClick(documentName || 'Finding', pageNumber, citation.documentId)}
                           >
                             View in Document
                           </span>

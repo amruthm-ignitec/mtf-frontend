@@ -2,13 +2,15 @@ import React from 'react';
 import { Calendar, Briefcase, Heart, AlertTriangle, Globe, FileText } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface DRAISectionProps {
   data: any; // Accept flexible data structure from backend
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function DRAISection({ data, onCitationClick }: DRAISectionProps) {
+export default function DRAISection({ data, documents = [], onCitationClick }: DRAISectionProps) {
   // Handle both old structure and new backend structure
   const summary = data?.summary || {};
   const extractedData = data?.extracted_data || {};
@@ -258,13 +260,14 @@ export default function DRAISection({ data, onCitationClick }: DRAISectionProps)
           <div className="flex flex-wrap gap-2">
             {pages.map((citation: any, idx: number) => {
               const { page, documentId } = getCitationInfo(citation);
+              const documentName = getDocumentName(documents, documentId);
               return (
                 <CitationBadge
                   key={idx}
                   pageNumber={page}
-                  documentName="Donor Risk Assessment Interview"
+                  documentName={documentName || undefined}
                   documentId={documentId}
-                  onClick={() => onCitationClick?.('Donor Risk Assessment Interview', page, documentId)}
+                  onClick={() => onCitationClick?.(documentName || 'Donor Risk Assessment Interview', page, documentId)}
                 />
               );
             })}

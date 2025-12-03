@@ -2,13 +2,15 @@ import React from 'react';
 import { Droplets, Calculator, FileText } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface PlasmaDilutionSectionProps {
   data: any; // Accept flexible data structure from backend
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaDilutionSectionProps) {
+export default function PlasmaDilutionSection({ data, documents = [], onCitationClick }: PlasmaDilutionSectionProps) {
   // Handle both old structure and new backend structure
   const summary = data?.summary || {};
   const extractedData = data?.extracted_data || {};
@@ -113,13 +115,14 @@ export default function PlasmaDilutionSection({ data, onCitationClick }: PlasmaD
           <div className="flex flex-wrap gap-2">
             {pages.map((citation: any, idx: number) => {
               const { page, documentId } = getCitationInfo(citation);
+              const documentName = getDocumentName(documents, documentId);
               return (
                 <CitationBadge
                   key={idx}
                   pageNumber={page}
-                  documentName="Plasma Dilution"
+                  documentName={documentName || undefined}
                   documentId={documentId}
-                  onClick={() => onCitationClick?.('Plasma Dilution', page, documentId)}
+                  onClick={() => onCitationClick?.(documentName || 'Plasma Dilution', page, documentId)}
                 />
               );
             })}

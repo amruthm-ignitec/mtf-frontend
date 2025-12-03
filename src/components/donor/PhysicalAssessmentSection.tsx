@@ -2,14 +2,17 @@ import React from 'react';
 import { Ruler, Scale, Eye, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface PhysicalAssessmentSectionProps {
   data: any; // Accept flexible data structure from backend
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function PhysicalAssessmentSection({
   data,
+  documents = [],
   onCitationClick,
 }: PhysicalAssessmentSectionProps) {
   // Handle both old structure and new backend structure
@@ -224,13 +227,14 @@ export default function PhysicalAssessmentSection({
           <div className="flex flex-wrap gap-2">
             {pages.map((citation: any, idx: number) => {
               const { page, documentId } = getCitationInfo(citation);
+              const documentName = getDocumentName(documents, documentId);
               return (
                 <CitationBadge
                   key={idx}
                   pageNumber={page}
-                  documentName="Physical Assessment"
+                  documentName={documentName || undefined}
                   documentId={documentId}
-                  onClick={() => onCitationClick?.('Physical Assessment', page, documentId)}
+                  onClick={() => onCitationClick?.(documentName || 'Physical Assessment', page, documentId)}
                 />
               );
             })}

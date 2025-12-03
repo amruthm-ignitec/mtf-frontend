@@ -2,13 +2,15 @@ import React from 'react';
 import { FileText, User, Calendar } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface AuthorizationSectionProps {
   data: any; // Accept flexible data structure from backend
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function AuthorizationSection({ data, onCitationClick }: AuthorizationSectionProps) {
+export default function AuthorizationSection({ data, documents = [], onCitationClick }: AuthorizationSectionProps) {
   // Handle both old structure and new backend structure
   const summary = data?.summary || {};
   const extractedData = data?.extracted_data || {};
@@ -190,13 +192,14 @@ export default function AuthorizationSection({ data, onCitationClick }: Authoriz
           <div className="flex flex-wrap gap-2">
             {pages.map((citation: any, idx: number) => {
               const { page, documentId } = getCitationInfo(citation);
+              const documentName = getDocumentName(documents, documentId);
               return (
                 <CitationBadge
                   key={idx}
                   pageNumber={page}
-                  documentName="Authorization for Tissue Donation"
+                  documentName={documentName || undefined}
                   documentId={documentId}
-                  onClick={() => onCitationClick?.('Authorization for Tissue Donation', page, documentId)}
+                  onClick={() => onCitationClick?.(documentName || 'Authorization for Tissue Donation', page, documentId)}
                 />
               );
             })}

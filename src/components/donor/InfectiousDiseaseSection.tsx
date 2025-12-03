@@ -5,16 +5,18 @@ import StatusBadge from '../ui/StatusBadge';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 import Table from '../ui/Table';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface InfectiousDiseaseSectionProps {
   data: any; // Accept flexible data structure from backend
   serologyResults?: Record<string, string>; // Optional serology results from extraction data
   cultureResults?: Array<{ tissue_location?: string; microorganism?: string; source_page?: number }>; // Optional culture results
   criticalLabValues?: Record<string, { value: string; reference: string; unit: string }>; // Optional critical lab values
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function InfectiousDiseaseSection({ data, serologyResults, cultureResults, criticalLabValues, onCitationClick }: InfectiousDiseaseSectionProps) {
+export default function InfectiousDiseaseSection({ data, serologyResults, cultureResults, criticalLabValues, documents = [], onCitationClick }: InfectiousDiseaseSectionProps) {
   // Handle both old structure and new backend structure
   const summary = data?.summary || {};
   const extractedData = data?.extracted_data || {};
@@ -294,13 +296,14 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                       <div className="flex flex-wrap gap-2">
                         {pages.map((citation: any, idx: number) => {
                           const { page, documentId } = getCitationInfo(citation);
+                          const documentName = getDocumentName(documents, documentId);
                           return (
                             <CitationBadge
                               key={idx}
                               pageNumber={page}
-                              documentName="Infectious Disease Testing"
+                              documentName={documentName || undefined}
                               documentId={documentId}
-                              onClick={() => onCitationClick?.('Infectious Disease Testing', page, documentId)}
+                              onClick={() => onCitationClick?.(documentName || 'Infectious Disease Testing', page, documentId)}
                             />
                           );
                         })}
@@ -527,7 +530,7 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
               <div className="pt-4 border-t border-gray-200">
                 <CitationBadge
                   pageNumber={1}
-                  documentName={serology_report.source_document}
+                  documentName={getDocumentName(documents, (serology_report as any).document_id) || serology_report.source_document}
                   documentId={(serology_report as any).document_id}
                   onClick={() => onCitationClick?.(serology_report.source_document, 1, (serology_report as any).document_id)}
                 />
@@ -750,13 +753,14 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
           <div className="flex flex-wrap gap-2">
             {pages.map((citation: any, idx: number) => {
               const { page, documentId } = getCitationInfo(citation);
+              const documentName = getDocumentName(documents, documentId);
               return (
                 <CitationBadge
                   key={idx}
                   pageNumber={page}
-                  documentName="Infectious Disease Testing"
+                  documentName={documentName || undefined}
                   documentId={documentId}
-                  onClick={() => onCitationClick?.('Infectious Disease Testing', page, documentId)}
+                  onClick={() => onCitationClick?.(documentName || 'Infectious Disease Testing', page, documentId)}
                 />
               );
             })}

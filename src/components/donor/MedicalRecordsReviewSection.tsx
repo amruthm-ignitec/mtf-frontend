@@ -2,14 +2,17 @@ import React from 'react';
 import { FileText, ClipboardList } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface MedicalRecordsReviewSectionProps {
   data: any; // Accept flexible data structure from backend
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function MedicalRecordsReviewSection({
   data,
+  documents = [],
   onCitationClick,
 }: MedicalRecordsReviewSectionProps) {
   // Handle both old structure and new backend structure
@@ -146,13 +149,14 @@ export default function MedicalRecordsReviewSection({
           <div className="flex flex-wrap gap-2">
             {pages.map((citation: any, idx: number) => {
               const { page, documentId } = getCitationInfo(citation);
+              const documentName = getDocumentName(documents, documentId);
               return (
                 <CitationBadge
                   key={idx}
                   pageNumber={page}
-                  documentName="Medical Records Review Summary"
+                  documentName={documentName || undefined}
                   documentId={documentId}
-                  onClick={() => onCitationClick?.('Medical Records Review Summary', page, documentId)}
+                  onClick={() => onCitationClick?.(documentName || 'Medical Records Review Summary', page, documentId)}
                 />
               );
             })}

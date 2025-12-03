@@ -2,14 +2,17 @@ import { ConditionalDocuments } from '../../types/extraction';
 import { FlaskConical, TestTube, FileSearch } from 'lucide-react';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface ConditionalDocumentsSectionProps {
   data: ConditionalDocuments;
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function ConditionalDocumentsSection({
   data,
+  documents = [],
   onCitationClick,
 }: ConditionalDocumentsSectionProps) {
   const { bioburden_results, toxicology_report, autopsy_report } = data;
@@ -101,13 +104,14 @@ export default function ConditionalDocumentsSection({
                 typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
                   ? (firstPage as any).document_id
                   : (bioburden_results as any).document_id;
+              const documentName = getDocumentName(documents, documentId) || bioburden_results.source_document;
               return (
                 <div className="mt-4">
                   <CitationBadge
                     pageNumber={page}
-                    documentName={bioburden_results.source_document}
+                    documentName={documentName}
                     documentId={documentId}
-                    onClick={() => onCitationClick?.(bioburden_results.source_document, page, documentId)}
+                    onClick={() => onCitationClick?.(documentName, page, documentId)}
                   />
                 </div>
               );
@@ -152,13 +156,14 @@ export default function ConditionalDocumentsSection({
                 typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
                   ? (firstPage as any).document_id
                   : (toxicology_report as any).document_id;
+              const documentName = getDocumentName(documents, documentId) || toxicology_report.source_document;
               return (
                 <div className="mt-4">
                   <CitationBadge
                     pageNumber={page}
-                    documentName={toxicology_report.source_document}
+                    documentName={documentName}
                     documentId={documentId}
-                    onClick={() => onCitationClick?.(toxicology_report.source_document, page, documentId)}
+                    onClick={() => onCitationClick?.(documentName, page, documentId)}
                   />
                 </div>
               );
@@ -225,13 +230,14 @@ export default function ConditionalDocumentsSection({
                 typeof firstPage === 'object' && firstPage !== null && 'document_id' in firstPage
                   ? (firstPage as any).document_id
                   : (autopsy_report as any).document_id;
+              const documentName = getDocumentName(documents, documentId) || autopsy_report.source_document;
               return (
                 <div className="mt-4">
                   <CitationBadge
                     pageNumber={page}
-                    documentName={autopsy_report.source_document}
+                    documentName={documentName}
                     documentId={documentId}
-                    onClick={() => onCitationClick?.(autopsy_report.source_document, page, documentId)}
+                    onClick={() => onCitationClick?.(documentName, page, documentId)}
                   />
                 </div>
               );

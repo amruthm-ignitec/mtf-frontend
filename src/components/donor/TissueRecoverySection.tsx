@@ -2,14 +2,17 @@ import React from 'react';
 import { TissueRecovery } from '../../types/extraction';
 import TissueEligibilityAnalysis from './TissueEligibilityAnalysis';
 import Card from '../ui/Card';
+import CitationBadge from '../ui/CitationBadge';
+import { getDocumentName, Document } from '../../utils/documentUtils';
 
 interface TissueRecoverySectionProps {
   data?: TissueRecovery | any;
   eligibilityData?: any[];
+  documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
-export default function TissueRecoverySection({ data, eligibilityData, onCitationClick }: TissueRecoverySectionProps) {
+export default function TissueRecoverySection({ data, eligibilityData, documents = [], onCitationClick }: TissueRecoverySectionProps) {
   // Check if data exists and has meaningful content
   const hasSummary = data?.summary && (
     data.summary['Tissues Recovered'] || 
@@ -84,14 +87,15 @@ export default function TissueRecoverySection({ data, eligibilityData, onCitatio
                     const documentId = typeof citation === 'object' && citation !== null && 'document_id' in citation
                       ? citation.document_id
                       : undefined;
+                    const documentName = getDocumentName(documents, documentId);
                     return (
-                      <button
+                      <CitationBadge
                         key={idx}
-                        onClick={() => onCitationClick?.('Tissue Recovery Information', page, documentId)}
-                        className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
-                      >
-                        Page {page}
-                      </button>
+                        pageNumber={page}
+                        documentName={documentName || undefined}
+                        documentId={documentId}
+                        onClick={() => onCitationClick?.(documentName || 'Tissue Recovery Information', page, documentId)}
+                      />
                     );
                   })}
                 </div>

@@ -1143,7 +1143,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} onCitationClick={handleCitationClick} />;
+        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'authorization':
         // Check for authorization_for_tissue_donation key
@@ -1155,7 +1155,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <AuthorizationSection data={authorizationData} onCitationClick={handleCitationClick} />;
+        return <AuthorizationSection data={authorizationData} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'drai':
         if (!extractionData?.extracted_data?.donor_risk_assessment_interview && !extractionData?.extracted_data?.drai) {
@@ -1167,7 +1167,7 @@ export default function Summary() {
         }
         // Try both keys - backend uses donor_risk_assessment_interview, types use drai
         const draiData = extractionData.extracted_data.donor_risk_assessment_interview || extractionData.extracted_data.drai;
-        return <DRAISection data={draiData} onCitationClick={handleCitationClick} />;
+        return <DRAISection data={draiData} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'infectious-disease':
         // Show infectious disease tab if we have any related data
@@ -1190,6 +1190,7 @@ export default function Summary() {
             serologyResults={extractionData?.serology_results?.result}
             cultureResults={extractionData?.culture_results?.result}
             criticalLabValues={extractionData?.critical_lab_values}
+            documents={documents}
             onCitationClick={handleCitationClick}
           />
         );
@@ -1211,6 +1212,7 @@ export default function Summary() {
         return <TissueRecoverySection 
           data={tissueRecoveryData} 
           eligibilityData={eligibilityData}
+          documents={documents}
           onCitationClick={handleCitationClick} 
         />;
 
@@ -1223,7 +1225,7 @@ export default function Summary() {
           </div>
         );
         }
-        return <ConditionalDocumentsSection data={extractionData.conditional_documents} onCitationClick={handleCitationClick} />;
+        return <ConditionalDocumentsSection data={extractionData.conditional_documents} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'plasma-dilution':
         const plasmaDilutionData = extractionData?.extracted_data?.plasma_dilution;
@@ -1234,7 +1236,7 @@ export default function Summary() {
             </div>
           );
         }
-        return <PlasmaDilutionSection data={plasmaDilutionData} onCitationClick={handleCitationClick} />;
+        return <PlasmaDilutionSection data={plasmaDilutionData} documents={documents} onCitationClick={handleCitationClick} />;
 
       default:
         return null;
@@ -1414,6 +1416,7 @@ export default function Summary() {
           finding={selectedFinding}
           isOpen={!!selectedFinding}
           onClose={() => setSelectedFinding(null)}
+          documents={documents}
           onCitationClick={handleCitationClick}
         />
       )}
