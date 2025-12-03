@@ -319,7 +319,7 @@ export default function PDFViewerWithPage({
       </div>
 
       {/* PDF Content */}
-      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-100 p-2">
+      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-100 px-6 py-4">
         {error ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -328,7 +328,7 @@ export default function PDFViewerWithPage({
             </div>
           </div>
         ) : pdfData ? (
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center min-w-full">
             <Document
               file={pdfData}
               onLoadSuccess={onDocumentLoadSuccess}
@@ -348,7 +348,8 @@ export default function PDFViewerWithPage({
                   <div
                     key={`page_${pageNum}`}
                     ref={isTargetPage ? pageRef : null}
-                    className={`mb-2 ${isTargetPage ? 'ring-2 ring-blue-500 rounded shadow-lg' : ''}`}
+                    className={`mb-4 ${isTargetPage ? 'ring-2 ring-blue-500 rounded shadow-lg' : ''}`}
+                    style={{ minWidth: 'fit-content' }}
                   >
                     <Page
                       pageNumber={pageNum}
