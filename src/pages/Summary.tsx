@@ -938,18 +938,70 @@ export default function Summary() {
                     {extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
                         {extractionData.culture_results.result.slice(0, 2).map((culture: any, idx: number) => {
-                          const microorganism = culture?.microorganism || '';
-                          const hasGrowth = microorganism && microorganism.toLowerCase() !== 'no growth' && microorganism.toLowerCase() !== 'negative';
-                          return (
-                            <div key={idx} className="bg-gray-50 p-2 rounded">
-                              <div className="text-xs text-gray-500">{culture?.tissue_location || 'Culture'}</div>
-                              <div className={`text-sm font-medium ${
-                                hasGrowth ? 'text-red-600' : 'text-green-600'
-                              }`}>
-                                {microorganism || '-'}
+                          // Check if it's old format (tissue_location + microorganism) or new format (test_name + result)
+                          const isOldFormat = culture?.tissue_location || culture?.microorganism;
+                          const isNewFormat = culture?.test_name || culture?.result;
+                          
+                          if (isOldFormat) {
+                            // Old format: tissue_location + microorganism
+                            const microorganism = culture?.microorganism || '';
+                            const hasGrowth = microorganism && microorganism.toLowerCase() !== 'no growth' && microorganism.toLowerCase() !== 'negative';
+                            return (
+                              <div key={idx} className="bg-gray-50 p-2 rounded">
+                                <div className="text-xs text-gray-500">{culture?.tissue_location || 'Culture'}</div>
+                                <div className={`text-sm font-medium ${
+                                  hasGrowth ? 'text-red-600' : 'text-green-600'
+                                }`}>
+                                  {microorganism || '-'}
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          } else if (isNewFormat) {
+                            // New format: test_name + result + optional fields
+                            const resultValue = culture?.result || '';
+                            const resultStr = resultValue.toLowerCase().trim();
+                            // Check for negative patterns
+                            const negativePatterns = ['no growth', 'negative', 'neg', 'no organisms', 'not detected'];
+                            const isNegative = negativePatterns.some(pattern => resultStr.includes(pattern));
+                            // Only check for positive if it's not negative
+                            const hasGrowth = !isNegative && (
+                              resultStr.includes('positive') || 
+                              resultStr.includes('detected') || 
+                              resultStr.includes('growth') ||
+                              (resultStr.length > 0 && !resultStr.includes('no'))
+                            );
+                            
+                            return (
+                              <div key={idx} className="bg-gray-50 p-2 rounded">
+                                <div className="text-xs text-gray-500 mb-1.5 truncate" title={culture?.test_name || 'Culture'}>
+                                  {culture?.test_name || 'Culture'}
+                                </div>
+                                {culture?.specimen_type && (
+                                  <div className="text-xs text-gray-400 mb-1 italic truncate" title={culture.specimen_type}>
+                                    {culture.specimen_type}
+                                  </div>
+                                )}
+                                <div className={`text-sm font-medium ${
+                                  hasGrowth ? 'text-red-600' : 'text-green-600'
+                                }`}>
+                                  {resultValue || '-'}
+                                </div>
+                                {culture?.specimen_date && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {culture.specimen_date}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          } else {
+                            // Fallback for unknown format
+                            return (
+                              <div key={idx} className="bg-gray-50 p-2 rounded">
+                                <div className="text-xs text-gray-500">Culture</div>
+                                <div className="text-sm font-medium text-gray-600">-</div>
+                              </div>
+                            );
+                          }
                         })}
                       </div>
                     ) : (
