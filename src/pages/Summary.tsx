@@ -1210,15 +1210,18 @@ export default function Summary() {
         return <AuthorizationSection data={authorizationData} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'drai':
-        if (!extractionData?.extracted_data?.donor_risk_assessment_interview && !extractionData?.extracted_data?.drai) {
+        // Try both keys - backend uses donor_risk_assessment_interview, types use drai
+        const draiData = extractionData?.extracted_data?.donor_risk_assessment_interview || extractionData?.extracted_data?.drai;
+        if (!draiData) {
           return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">DRAI data not available.</p>
-                    </div>
+            <Card className="p-6">
+              <div className="text-center py-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Donor Risk Assessment Interview (DRAI)</h2>
+                <p className="text-sm text-gray-500">No DRAI data available for this donor.</p>
+              </div>
+            </Card>
           );
         }
-        // Try both keys - backend uses donor_risk_assessment_interview, types use drai
-        const draiData = extractionData.extracted_data.donor_risk_assessment_interview || extractionData.extracted_data.drai;
         return <DRAISection data={draiData} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'infectious-disease':
@@ -1283,9 +1286,12 @@ export default function Summary() {
         const plasmaDilutionData = extractionData?.extracted_data?.plasma_dilution;
         if (!plasmaDilutionData) {
           return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Plasma dilution data not available.</p>
-            </div>
+            <Card className="p-6">
+              <div className="text-center py-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Plasma Dilution</h2>
+                <p className="text-sm text-gray-500">No plasma dilution data available for this donor.</p>
+              </div>
+            </Card>
           );
         }
         return <PlasmaDilutionSection data={plasmaDilutionData} documents={documents} onCitationClick={handleCitationClick} />;
