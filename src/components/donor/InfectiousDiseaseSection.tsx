@@ -10,7 +10,19 @@ import { getDocumentName, Document } from '../../utils/documentUtils';
 interface InfectiousDiseaseSectionProps {
   data: any; // Accept flexible data structure from backend
   serologyResults?: Record<string, string>; // Optional serology results from extraction data
-  cultureResults?: Array<{ tissue_location?: string; microorganism?: string; source_page?: number }>; // Optional culture results
+  cultureResults?: Array<{ 
+    // Old format
+    tissue_location?: string; 
+    microorganism?: string; 
+    source_page?: number;
+    // New format
+    test_name?: string;
+    test_method?: string;
+    specimen_type?: string;
+    specimen_date?: string;
+    result?: string;
+    comments?: string;
+  }>; // Optional culture results
   criticalLabValues?: Record<string, { value: string; reference: string; unit: string }>; // Optional critical lab values
   documents?: Document[]; // Documents array for resolving document names
   onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
@@ -409,41 +421,119 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 <div className="space-y-4 flex-1">
                   {cultureResults && cultureResults.length > 0 ? (
                     cultureResults.map((culture, idx) => {
-                      const hasGrowth = culture.microorganism && 
-                        culture.microorganism.toLowerCase() !== 'no growth' && 
-                        culture.microorganism.toLowerCase() !== 'negative';
-                      const microorganism = culture.microorganism || 'No Growth';
+                      // Check if it's new format (has test_name or result) or old format (has tissue_location or microorganism)
+                      const isNewFormat = culture.test_name || culture.result;
+                      const isOldFormat = culture.tissue_location || culture.microorganism;
                       
-                      return (
-                        <div 
-                          key={idx}
-                          className="bg-white rounded-lg border border-gray-200 p-4"
-                        >
-                          <div className="text-xs font-semibold text-gray-900 mb-2">
-                            {culture.tissue_location || 'Culture'}
+                      if (isNewFormat) {
+                        // New format: test_name, result, test_method, specimen_type, specimen_date, comments
+                        const resultValue = culture.result || '';
+                        const resultLower = resultValue.toLowerCase();
+                        // Determine if there's growth - positive findings
+                        // Check for negative indicators first (no growth)
+                        let hasGrowth = false;
+                        if (resultValue && 
+                            !resultLower.includes('no growth') &&
+                            !(resultLower.includes('normal') && !resultLower.includes('positive'))) {
+                          // Check for positive indicators (growth detected)
+                          hasGrowth = resultLower.includes('detected') ||
+                            resultLower.includes('positive') ||
+                            resultLower.includes('staphylococcus') ||
+                            resultLower.includes('bacteria') ||
+                            resultLower.includes('organism') ||
+                            resultLower.includes('cocci') ||
+                            resultLower.includes('species') ||
+                            (resultValue.length > 10); // If it's a substantial result, likely growth
+                        }
+                        
+                        return (
+                          <div 
+                            key={idx}
+                            className="bg-white rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="text-xs font-semibold text-gray-900 mb-2">
+                              {culture.test_name || 'Culture'}
+                            </div>
+                            <div className={`text-sm font-semibold mb-1 ${
+                              hasGrowth ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {resultValue || 'No Result'}
+                            </div>
+                            {culture.test_method && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Method: {culture.test_method}
+                              </div>
+                            )}
+                            {culture.specimen_type && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Specimen: {culture.specimen_type}
+                              </div>
+                            )}
+                            {culture.specimen_date && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Date: {culture.specimen_date}
+                              </div>
+                            )}
+                            {culture.comments && (
+                              <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
+                                {culture.comments}
+                              </div>
+                            )}
                           </div>
-                          <div className={`text-sm font-semibold mb-1 ${
-                            hasGrowth ? 'text-red-600' : 'text-green-600'
-                          }`}>
-                            {microorganism}
+                        );
+                      } else if (isOldFormat) {
+                        // Old format: tissue_location, microorganism
+                        const hasGrowth = culture.microorganism && 
+                          culture.microorganism.toLowerCase() !== 'no growth' && 
+                          culture.microorganism.toLowerCase() !== 'negative';
+                        const microorganism = culture.microorganism || 'No Growth';
+                        
+                        return (
+                          <div 
+                            key={idx}
+                            className="bg-white rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="text-xs font-semibold text-gray-900 mb-2">
+                              {culture.tissue_location || 'Culture'}
+                            </div>
+                            <div className={`text-sm font-semibold mb-1 ${
+                              hasGrowth ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {microorganism}
+                            </div>
+                            {(culture as any).collection_date && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Collected: {(culture as any).collection_date}
+                              </div>
+                            )}
+                            {(culture as any).preliminary_result && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {(culture as any).preliminary_result}
+                              </div>
+                            )}
+                            {(culture as any).status && (culture as any).status.toLowerCase() === 'pending' && (
+                              <div className="text-xs text-orange-600 font-medium mt-1">
+                                Pending
+                              </div>
+                            )}
                           </div>
-                          {(culture as any).collection_date && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Collected: {(culture as any).collection_date}
+                        );
+                      } else {
+                        // Fallback for unknown format
+                        return (
+                          <div 
+                            key={idx}
+                            className="bg-white rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="text-xs font-semibold text-gray-900 mb-2">
+                              Culture
                             </div>
-                          )}
-                          {(culture as any).preliminary_result && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {(culture as any).preliminary_result}
+                            <div className="text-sm text-gray-600">
+                              {JSON.stringify(culture)}
                             </div>
-                          )}
-                          {(culture as any).status && (culture as any).status.toLowerCase() === 'pending' && (
-                            <div className="text-xs text-orange-600 font-medium mt-1">
-                              Pending
-                            </div>
-                          )}
-                        </div>
-                      );
+                          </div>
+                        );
+                      }
                     })
                   ) : (
                     <div className="bg-white rounded-lg border border-gray-200 p-4">
