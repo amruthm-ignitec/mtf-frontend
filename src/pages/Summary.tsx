@@ -352,7 +352,11 @@ export default function Summary() {
                       <span>|</span>
                       <span className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
-                        Time of Death: {new Date(donor.uploadTimestamp).toLocaleString()}
+                        Time of Death: {extractionData?.terminal_information?.time_of_death 
+                          ? extractionData.terminal_information.time_of_death 
+                          : donor.uploadTimestamp 
+                            ? new Date(donor.uploadTimestamp).toLocaleString() 
+                            : '-'}
                       </span>
                     </div>
                   </div>

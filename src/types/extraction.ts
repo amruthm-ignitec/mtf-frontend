@@ -369,6 +369,21 @@ export interface ExtractedData {
   plasma_dilution: PlasmaDilution;
 }
 
+// Terminal Information
+export interface TerminalInformation {
+  cause_of_death?: string | null;
+  time_of_death?: string | null;
+  hypotension?: string | null;
+  sepsis?: string | null;
+}
+
+// Recovery Information
+export interface RecoveryInformation {
+  recovery_window?: string | null;
+  location?: string | null;
+  consent_status?: string | null;
+}
+
 // Complete Extraction Response
 export interface ExtractionDataResponse {
   donor_id: string;
@@ -380,5 +395,10 @@ export interface ExtractionDataResponse {
   validation?: ValidationStatus;
   compliance_status?: ComplianceStatus;
   document_summary?: DocumentSummary;
+  terminal_information?: TerminalInformation;
+  recovery_information?: RecoveryInformation;
+  tissue_eligibility?: any[];
+  critical_lab_values?: any;
+  key_medical_findings?: any;
 }
 
