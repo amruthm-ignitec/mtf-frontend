@@ -4,7 +4,7 @@ import { DonorCreate, DonorUpdate, DonorResponse } from '../types/donor';
 import { ExtractionDataResponse } from '../types/extraction';
 import { DonorApprovalCreate, DonorApprovalResponse, PastDataResponse } from '../types/donorApproval';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 class ApiService {
   private baseURL: string;
