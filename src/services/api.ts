@@ -244,6 +244,18 @@ class ApiService {
   async getApproval(approvalId: number): Promise<DonorApprovalResponse> {
     return this.request<DonorApprovalResponse>(`/donor-approvals/${approvalId}`);
   }
+
+  // User Feedback methods
+  async getFeedbacks(): Promise<Array<{ id: number; username: string; feedback: string; created_at: string }>> {
+    return this.request<Array<{ id: number; username: string; feedback: string; created_at: string }>>('/feedback');
+  }
+
+  async createFeedback(text: string): Promise<{ id: number; username: string; feedback: string; created_at: string }> {
+    return this.request<{ id: number; username: string; feedback: string; created_at: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
 }
 
 export const apiService = new ApiService();

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LayoutDashboard, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users } from 'lucide-react';
+import { User, LayoutDashboard, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users, MessageSquare } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationDropdown from '../notifications/NotificationDropdown';
@@ -82,6 +82,13 @@ export default function Header() {
                   Donors
                 </Link>
               )}
+              <Link
+                to="/feedback"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                User Feedback
+              </Link>
             </nav>
             <div className="flex items-center">
               <div className="relative mr-4" ref={notificationRef}>

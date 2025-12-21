@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import DonorManagement from './pages/DonorManagement';
 import Documents from './pages/Documents';
+import UserFeedback from './pages/UserFeedback';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
                     <Route path="/intelligence" element={<MedicalDirectorRoute><Intelligence /></MedicalDirectorRoute>} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/feedback" element={<UserFeedback />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </ProtectedRoute>
