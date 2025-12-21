@@ -143,6 +143,7 @@ export default function Summary() {
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [selectedPageNumber, setSelectedPageNumber] = useState<number | null>(null);
   const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
 
   // useEffect(() => {
   //   console.log('Current ID:', id);
@@ -1379,6 +1380,7 @@ export default function Summary() {
           setSelectedPdfUrl(pdfUrl);
           setSelectedPageNumber(pageNumber || undefined);
           setSelectedDocumentName(document.original_filename || document.filename || sourceDocument);
+          setSelectedDocumentId(documentId);
           return;
         } catch (error) {
           console.error('Error getting PDF URL:', error);
@@ -1402,6 +1404,7 @@ export default function Summary() {
           setSelectedPdfUrl(pdfUrl);
           setSelectedPageNumber(pageNumber || undefined);
           setSelectedDocumentName(matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
+          setSelectedDocumentId(matchedDocument.id);
           return;
         } catch (error) {
           console.error('Error getting PDF URL for matched document:', error);
@@ -1524,8 +1527,10 @@ export default function Summary() {
                     setSelectedPdfUrl(null);
                     setSelectedPageNumber(null);
                     setSelectedDocumentName(null);
+                    setSelectedDocumentId(null);
                   }}
                   documentName={selectedDocumentName || 'Document'}
+                  documentId={selectedDocumentId || undefined}
                 />
               </div>
             </div>
