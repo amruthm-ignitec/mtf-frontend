@@ -200,9 +200,15 @@ export default function PDFViewerWithPage({
     if (pdfData instanceof ArrayBuffer) {
       const blob = new Blob([pdfData], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-      // Clean up the blob URL after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      const newWindow = window.open(blobUrl, '_blank');
+      
+      // Don't revoke the blob URL immediately - the browser will clean it up
+      // when the tab is closed. Revoking too early causes "can't open file" errors.
+      // If the window failed to open (popup blocked), clean up immediately
+      if (!newWindow) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      // Otherwise, let the browser handle cleanup automatically when the tab closes
     } else {
       // For URLs, open directly
       window.open(pdfUrl, '_blank');
