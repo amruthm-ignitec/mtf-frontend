@@ -18,6 +18,8 @@ import ConditionalDocumentsSection from '../components/donor/ConditionalDocument
 import MedicalRecordsReviewSection from '../components/donor/MedicalRecordsReviewSection';
 import PlasmaDilutionSection from '../components/donor/PlasmaDilutionSection';
 import PastDataSection from '../components/donor/PastDataSection';
+import EligibilityStatusSection from '../components/donor/EligibilityStatusSection';
+import CriteriaEvaluationsSection from '../components/donor/CriteriaEvaluationsSection';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import PDFViewer from '../components/ui/PDFViewer';
@@ -64,6 +66,8 @@ const FindingsSection = () => (
 const SUMMARY_TABS = [
   { id: 'overview', label: 'Overview', icon: Layout },
   { id: 'clinical', label: 'Clinical Information', icon: Heart },
+  { id: 'eligibility', label: 'Eligibility Status', icon: Shield },
+  { id: 'criteria', label: 'Criteria Evaluations', icon: FileCheck },
   { id: 'physical-assessment', label: 'Physical Assessment', icon: UserCheck },
   { id: 'authorization', label: 'Authorization', icon: FileCheck },
   { id: 'drai', label: 'DRAI', icon: User },
@@ -726,6 +730,55 @@ export default function Summary() {
               </div>
             )}
 
+            {/* Eligibility Status Summary */}
+            {extractionData?.eligibility && (
+              <EligibilityStatusSection eligibility={extractionData.eligibility} />
+            )}
+
+            {/* Criteria Evaluations Summary */}
+            {extractionData?.criteria_evaluations && Object.keys(extractionData.criteria_evaluations).length > 0 && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-md font-semibold mb-3 flex items-center">
+                  <FileCheck className="h-4 w-4 mr-2 text-gray-700" />
+                  Criteria Evaluations Summary
+                </h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {Object.keys(extractionData.criteria_evaluations).length}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Total Criteria</p>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded border border-green-200">
+                    <p className="text-2xl font-bold text-green-700">
+                      {Object.values(extractionData.criteria_evaluations).filter((e: any) => e.evaluation_result === 'acceptable').length}
+                    </p>
+                    <p className="text-xs text-green-700 mt-1">Acceptable</p>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded border border-red-200">
+                    <p className="text-2xl font-bold text-red-700">
+                      {Object.values(extractionData.criteria_evaluations).filter((e: any) => e.evaluation_result === 'unacceptable').length}
+                    </p>
+                    <p className="text-xs text-red-700 mt-1">Unacceptable</p>
+                  </div>
+                  <div className="text-center p-3 bg-yellow-50 rounded border border-yellow-200">
+                    <p className="text-2xl font-bold text-yellow-700">
+                      {Object.values(extractionData.criteria_evaluations).filter((e: any) => e.evaluation_result === 'md_discretion').length}
+                    </p>
+                    <p className="text-xs text-yellow-700 mt-1">MD Discretion</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <button
+                    onClick={() => handleTabChange('criteria')}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                  >
+                    View all criteria evaluations →
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Critical Findings */}
             {criticalFindings.length > 0 && (
               <div className="bg-white rounded-lg shadow p-4">
@@ -739,6 +792,9 @@ export default function Summary() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-red-900">{finding.type}</p>
+                          {finding.reasoning && (
+                            <p className="text-xs text-red-700 mt-1">{finding.reasoning}</p>
+                          )}
                           <p className="text-xs text-red-700 mt-1">Severity: {finding.severity}</p>
                           {finding.automaticRejection && (
                             <p className="text-xs text-red-800 font-medium mt-1">Automatic Rejection</p>
@@ -749,6 +805,48 @@ export default function Summary() {
                   ))}
                   </div>
                     </div>
+            )}
+
+            {/* Document Summary */}
+            {extractionData?.document_summary && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-md font-semibold mb-3 flex items-center">
+                  <FileText className="h-4 w-4 mr-2 text-gray-700" />
+                  Document Processing Summary
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {extractionData.document_summary.total_documents_processed}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Documents Processed</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {extractionData.document_summary.total_pages_processed}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Pages Processed</p>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-lg font-bold text-blue-700">
+                      {extractionData.serology_results?.result ? Object.keys(extractionData.serology_results.result).length : 0}
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">Serology Tests</p>
+                  </div>
+                </div>
+                {extractionData.document_summary.extraction_methods_used && extractionData.document_summary.extraction_methods_used.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-gray-500 mb-2">Extraction Methods:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {extractionData.document_summary.extraction_methods_used.map((method, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+                          {method}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Missing Documents */}
@@ -779,19 +877,13 @@ export default function Summary() {
       case 'clinical':
         // Check if any clinical data is available
         const clinicalHasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
-        const clinicalHasSerologyFallback = extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type;
         const clinicalHasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
-        const clinicalHasMedicalHistory = extractionData?.extracted_data?.medical_records_review_summary;
-        const clinicalHasDRAI = extractionData?.extracted_data?.donor_risk_assessment_interview;
         const clinicalHasTerminalInfo = extractionData?.terminal_information;
         
         // If no clinical data is available, show empty state
         if (
           !clinicalHasSerology &&
-          !clinicalHasSerologyFallback &&
           !clinicalHasCulture &&
-          !clinicalHasMedicalHistory &&
-          !clinicalHasDRAI &&
           !clinicalHasTerminalInfo
         ) {
           return (
@@ -871,65 +963,8 @@ export default function Summary() {
                           </a>
                         </div>
                       </>
-                    ) : extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type ? (
-                      // Fallback to old structure if available
-                      <>
-                        <div>
-                          <div className="mb-2">
-                            <p className="text-xs text-gray-600">
-                              Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
-                            </p>
-                          </div>
-                          {extractionData.extracted_data.infectious_disease_testing.other_tests && (
-                            <div className="grid grid-cols-2 gap-3">
-                              {Object.entries(extractionData.extracted_data.infectious_disease_testing.other_tests)
-                                .filter(([key, value]) => 
-                                  value && 
-                                  typeof value === 'object' &&
-                                  'result' in value && 
-                                  value.result && 
-                                  (key.includes('sample') || key.includes('report') || key.includes('laboratory'))
-                                )
-                                .slice(0, 6)
-                                .map(([key, value]: [string, any]) => {
-                                  const resultStr = value?.result ? String(value.result).toLowerCase().trim() : '';
-                                  // First check for negative patterns - if found, it's NOT positive
-                                  const negativePatterns = ['non-reactive', 'non reactive', 'nonreactive', 'negative', 'neg'];
-                                  const isNegative = negativePatterns.some(pattern => resultStr.includes(pattern));
-                                  
-                                  // Only check for positive if it's not negative
-                                  const isPositive = !isNegative && (resultStr.includes('positive') || resultStr.includes('reactive'));
-                                  return (
-                                    <div key={key} className="bg-gray-50 p-2 rounded">
-                                      <div className="text-xs text-gray-500 mb-1.5">{value?.test_name || key || '-'}</div>
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                        isPositive 
-                                          ? 'bg-red-100 text-red-700 border border-red-200' 
-                                          : 'bg-green-100 text-green-700 border border-green-200'
-                                      }`}>
-                                        {value?.result || '-'}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2">
-                          <a
-                            href="#infectious-disease"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleTabChange('infectious-disease');
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            View detailed test results →
-                          </a>
-                        </div>
-                      </>
                     ) : (
-                      <p className="text-xs text-gray-500 italic">Serology report not performed</p>
+                      <p className="text-xs text-gray-500">No serology results available</p>
                     )}
                   </div>
 
@@ -1318,9 +1353,25 @@ export default function Summary() {
         );
 
       case 'tissue-recovery':
-        // Show tissue recovery tab if we have either tissue_recovery_information or tissue_eligibility
+        // Transform eligibility object to array format for backward compatibility with TissueRecoverySection
+        const eligibilityData = extractionData?.eligibility 
+          ? [
+              ...(extractionData.eligibility.musculoskeletal ? [{
+                tissue_type: 'musculoskeletal',
+                status: extractionData.eligibility.musculoskeletal.status,
+                blocking_criteria: extractionData.eligibility.musculoskeletal.blocking_criteria || [],
+                md_discretion_criteria: extractionData.eligibility.musculoskeletal.md_discretion_criteria || []
+              }] : []),
+              ...(extractionData.eligibility.skin ? [{
+                tissue_type: 'skin',
+                status: extractionData.eligibility.skin.status,
+                blocking_criteria: extractionData.eligibility.skin.blocking_criteria || [],
+                md_discretion_criteria: extractionData.eligibility.skin.md_discretion_criteria || []
+              }] : [])
+            ]
+          : extractionData?.tissue_eligibility; // Fallback to legacy format if exists
+        
         const tissueRecoveryData = extractionData?.extracted_data?.tissue_recovery_information || extractionData?.extracted_data?.tissue_recovery;
-        const eligibilityData = extractionData?.tissue_eligibility;
         
         // Always show the tab if we have eligibility data, even if recovery info is missing
         if (!tissueRecoveryData && !eligibilityData) {
@@ -1362,6 +1413,12 @@ export default function Summary() {
           );
         }
         return <PlasmaDilutionSection data={plasmaDilutionData} documents={documents} onCitationClick={handleCitationClick} />;
+
+      case 'eligibility':
+        return <EligibilityStatusSection eligibility={extractionData?.eligibility} />;
+
+      case 'criteria':
+        return <CriteriaEvaluationsSection criteriaEvaluations={extractionData?.criteria_evaluations} />;
 
       default:
         return null;
