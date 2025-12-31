@@ -101,6 +101,75 @@ export default function CriteriaEvaluationsSection({
     return false;
   };
 
+  // Format field name for display (replace underscores, capitalize)
+  const formatFieldName = (fieldName: string): string => {
+    return fieldName
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  // Format value for display
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ') : '';
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
+  // Get non-null extracted data entries as badges
+  const getExtractedDataBadges = (extractedData: Record<string, any>): Array<{ key: string; value: string }> => {
+    if (!extractedData) return [];
+    
+    const metadataFields = new Set(['_criterion_name', '_extraction_timestamp']);
+    const badges: Array<{ key: string; value: string }> = [];
+    
+    for (const [key, value] of Object.entries(extractedData)) {
+      // Skip metadata fields
+      if (metadataFields.has(key)) {
+        continue;
+      }
+      
+      // Skip null, undefined, or empty values
+      if (value === null || value === undefined) {
+        continue;
+      }
+      
+      // Skip empty strings
+      if (typeof value === 'string' && value.trim() === '') {
+        continue;
+      }
+      
+      // Skip empty arrays
+      if (Array.isArray(value) && value.length === 0) {
+        continue;
+      }
+      
+      // Skip empty objects
+      if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) {
+        continue;
+      }
+      
+      const formattedValue = formatValue(value);
+      if (formattedValue) {
+        badges.push({
+          key: formatFieldName(key),
+          value: formattedValue
+        });
+      }
+    }
+    
+    return badges;
+  };
+
   const filteredCriteria = Object.entries(criteriaEvaluations).filter(([_, evaluation]) => {
     if (filter === 'all') return true;
     return evaluation.evaluation_result === filter;
@@ -191,11 +260,17 @@ export default function CriteriaEvaluationsSection({
 
                   {evaluation.extracted_data && hasActualData(evaluation.extracted_data) && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">Extracted Data:</p>
-                      <div className="bg-gray-50 rounded p-2 text-xs">
-                        <pre className="whitespace-pre-wrap text-gray-700">
-                          {JSON.stringify(evaluation.extracted_data, null, 2)}
-                        </pre>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Extracted Data:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getExtractedDataBadges(evaluation.extracted_data).map((badge, idx) => (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-md text-xs"
+                          >
+                            <span className="font-medium text-blue-900">{badge.key}:</span>
+                            <span className="text-blue-700">{badge.value}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

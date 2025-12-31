@@ -667,62 +667,240 @@ export default function Summary() {
             })()}
 
             {/* Key Medical Findings */}
-            {extractionData?.key_medical_findings && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-md font-semibold mb-3 flex items-center">
-                  <Stethoscope className="h-4 w-4 mr-2 text-gray-700" />
-                  Key Medical Findings
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {extractionData.key_medical_findings?.tissue_quality && (
-                    <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.tissue_quality?.status === 'Good' 
-                        ? 'bg-green-50 border-green-100' 
-                        : extractionData.key_medical_findings.tissue_quality?.status === 'Review Required'
-                        ? 'bg-yellow-50 border-yellow-100'
-                        : 'bg-gray-50 border-gray-100'
-                    }`}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.tissue_quality?.description || '-'}
-                      </p>
-                    </div>
-                  )}
-                  {extractionData.key_medical_findings?.bone_density && (
-                    <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.bone_density?.status === 'Available' 
-                        ? 'bg-green-50 border-green-100' 
-                        : 'bg-gray-50 border-gray-100'
-                    }`}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.bone_density?.description || '-'}
-                      </p>
-                    </div>
-                  )}
-                  {extractionData.key_medical_findings?.cardiovascular_health && (
-                    <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.cardiovascular_health?.status === 'No significant findings' 
-                        ? 'bg-green-50 border-green-100' 
-                        : 'bg-blue-50 border-blue-100'
-                    }`}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.cardiovascular_health?.description || '-'}
-                      </p>
-                    </div>
-                  )}
-                  {extractionData.key_medical_findings?.medical_history && (
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.medical_history?.description || '-'}
-                      </p>
-                    </div>
-                  )}
+            {(() => {
+              // Extract key information from criteria_evaluations
+              const getExtractedMedicalInfo = () => {
+                if (!extractionData?.criteria_evaluations) return null;
+                
+                const criteria = extractionData.criteria_evaluations;
+                const info: {
+                  age?: number;
+                  gender?: string;
+                  causeOfDeath?: string;
+                  medicalHistory?: string[];
+                  biopsyFindings?: string[];
+                } = {};
+                
+                // Extract Age and Gender from "Age" criterion
+                if (criteria['Age']?.extracted_data) {
+                  const ageData = criteria['Age'].extracted_data;
+                  if (ageData.donor_age) info.age = ageData.donor_age;
+                  if (ageData.gender) info.gender = ageData.gender;
+                }
+                
+                // Extract Cause of Death from various criteria
+                const causeOfDeathCriteria = ['High Risk Non-IV Related Drug Use', 'High Risk Behavior', 'Cause of Death'];
+                for (const criterionName of causeOfDeathCriteria) {
+                  if (criteria[criterionName]?.extracted_data?.cause_of_death) {
+                    info.causeOfDeath = criteria[criterionName].extracted_data.cause_of_death;
+                    break;
+                  }
+                }
+                
+                // Extract Medical History from various criteria
+                const medicalHistoryItems: string[] = [];
+                
+                // From Dementia criterion
+                if (criteria['Dementia']?.extracted_data) {
+                  const dementiaData = criteria['Dementia'].extracted_data;
+                  if (dementiaData.dementia_diagnosis) {
+                    medicalHistoryItems.push(`Dementia: ${dementiaData.dementia_diagnosis}`);
+                  }
+                  if (dementiaData.dementia_etiology) {
+                    medicalHistoryItems.push(`Dementia Etiology: ${dementiaData.dementia_etiology}`);
+                  }
+                }
+                
+                // From Long Term Illness criterion
+                if (criteria['Long Term Illness']?.extracted_data) {
+                  const ltiData = criteria['Long Term Illness'].extracted_data;
+                  if (ltiData.long_term_illness) {
+                    medicalHistoryItems.push(`Long Term Illness: ${ltiData.long_term_illness}`);
+                  }
+                  if (ltiData.disease_history) {
+                    medicalHistoryItems.push(`Disease History: ${ltiData.disease_history}`);
+                  }
+                }
+                
+                // From Cancer criterion (biopsy findings)
+                if (criteria['Cancer']?.extracted_data) {
+                  const cancerData = criteria['Cancer'].extracted_data;
+                  if (cancerData.cancer_type) {
+                    medicalHistoryItems.push(`Cancer: ${cancerData.cancer_type}`);
+                  }
+                }
+                
+                // From Infection criterion
+                if (criteria['Infection']?.extracted_data) {
+                  const infectionData = criteria['Infection'].extracted_data;
+                  if (infectionData.active_infection) {
+                    medicalHistoryItems.push(`Active Infection: ${infectionData.active_infection}`);
+                  }
+                  if (infectionData.infection_type) {
+                    medicalHistoryItems.push(`Infection Type: ${infectionData.infection_type}`);
+                  }
+                }
+                
+                // From Sepsis criterion
+                if (criteria['Sepsis']?.extracted_data) {
+                  const sepsisData = criteria['Sepsis'].extracted_data;
+                  if (sepsisData.sepsis_diagnosis) {
+                    medicalHistoryItems.push(`Sepsis: ${sepsisData.sepsis_diagnosis}`);
+                  }
+                  if (sepsisData.sepsis_symptoms) {
+                    medicalHistoryItems.push(`Sepsis Symptoms: ${sepsisData.sepsis_symptoms}`);
+                  }
+                }
+                
+                // From Diabetes criterion
+                if (criteria['Diabetes']?.extracted_data) {
+                  const diabetesData = criteria['Diabetes'].extracted_data;
+                  if (diabetesData.diabetes_amputation) {
+                    medicalHistoryItems.push(`Diabetes Amputation: ${diabetesData.diabetes_amputation}`);
+                  }
+                }
+                
+                if (medicalHistoryItems.length > 0) {
+                  info.medicalHistory = medicalHistoryItems;
+                }
+                
+                // Extract biopsy findings from Cancer criterion
+                if (criteria['Cancer']?.extracted_data) {
+                  const cancerData = criteria['Cancer'].extracted_data;
+                  const biopsyFindings: string[] = [];
+                  
+                  // Look for biopsy-related findings
+                  if (cancerData.cancer_type && cancerData.cancer_type.toLowerCase().includes('negative')) {
+                    biopsyFindings.push(cancerData.cancer_type);
+                  }
+                  
+                  if (biopsyFindings.length > 0) {
+                    info.biopsyFindings = biopsyFindings;
+                  }
+                }
+                
+                return Object.keys(info).length > 0 ? info : null;
+              };
+              
+              const extractedInfo = getExtractedMedicalInfo();
+              const hasKeyFindings = extractionData?.key_medical_findings && Object.keys(extractionData.key_medical_findings).length > 0;
+              const hasExtractedInfo = extractedInfo !== null;
+              
+              if (!hasKeyFindings && !hasExtractedInfo) {
+                return null;
+              }
+              
+              return (
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h3 className="text-md font-semibold mb-3 flex items-center">
+                    <Stethoscope className="h-4 w-4 mr-2 text-gray-700" />
+                    Key Medical Findings
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Extracted Demographics */}
+                    {extractedInfo && (extractedInfo.age || extractedInfo.gender) && (
+                      <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Demographics</h4>
+                        <div className="space-y-1 text-xs text-gray-700">
+                          {extractedInfo.age && (
+                            <p><span className="font-medium">Age:</span> {extractedInfo.age} years</p>
+                          )}
+                          {extractedInfo.gender && (
+                            <p><span className="font-medium">Gender:</span> {extractedInfo.gender}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Extracted Cause of Death */}
+                    {extractedInfo?.causeOfDeath && (
+                      <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Cause of Death</h4>
+                        <p className="text-xs text-gray-700">{extractedInfo.causeOfDeath}</p>
+                      </div>
+                    )}
+                    
+                    {/* Extracted Medical History */}
+                    {extractedInfo?.medicalHistory && extractedInfo.medicalHistory.length > 0 && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
+                        <ul className="space-y-1 text-xs text-gray-700">
+                          {extractedInfo.medicalHistory.map((item, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="mr-1">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Extracted Biopsy Findings */}
+                    {extractedInfo?.biopsyFindings && extractedInfo.biopsyFindings.length > 0 && (
+                      <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Biopsy Findings</h4>
+                        <ul className="space-y-1 text-xs text-gray-700">
+                          {extractedInfo.biopsyFindings.map((finding, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="mr-1">•</span>
+                              <span>{finding}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Legacy Key Medical Findings */}
+                    {extractionData.key_medical_findings?.tissue_quality && (
+                      <div className={`p-3 rounded-lg border ${
+                        extractionData.key_medical_findings.tissue_quality?.status === 'Good' 
+                          ? 'bg-green-50 border-green-100' 
+                          : extractionData.key_medical_findings.tissue_quality?.status === 'Review Required'
+                          ? 'bg-yellow-50 border-yellow-100'
+                          : 'bg-gray-50 border-gray-100'
+                      }`}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.tissue_quality?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                    {extractionData.key_medical_findings?.bone_density && (
+                      <div className={`p-3 rounded-lg border ${
+                        extractionData.key_medical_findings.bone_density?.status === 'Available' 
+                          ? 'bg-green-50 border-green-100' 
+                          : 'bg-gray-50 border-gray-100'
+                      }`}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.bone_density?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                    {extractionData.key_medical_findings?.cardiovascular_health && (
+                      <div className={`p-3 rounded-lg border ${
+                        extractionData.key_medical_findings.cardiovascular_health?.status === 'No significant findings' 
+                          ? 'bg-green-50 border-green-100' 
+                          : 'bg-blue-50 border-blue-100'
+                      }`}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.cardiovascular_health?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                    {extractionData.key_medical_findings?.medical_history && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History (Legacy)</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.medical_history?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Eligibility Status Summary */}
             {extractionData?.eligibility && (
