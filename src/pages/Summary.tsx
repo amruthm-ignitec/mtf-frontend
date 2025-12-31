@@ -1360,22 +1360,26 @@ export default function Summary() {
 
   // Handle citation click
   const handleCitationClick = async (sourceDocument: string, pageNumber?: number, documentId?: number) => {
-    // If document_id is provided, use proxied PDF endpoint (avoids CORS issues)
+    // If document_id is provided, use it directly - backend will query the database
+    // We don't need the document to be in the local documents array
     if (documentId) {
-      const document = documents.find(doc => doc.id === documentId);
-      if (document) {
-        try {
-          // Use proxied PDF endpoint that streams with proper CORS headers
-          const pdfUrl = apiService.getDocumentPdfUrl(documentId);
-          setSelectedPdfUrl(pdfUrl);
-          setSelectedPageNumber(pageNumber || undefined);
-          setSelectedDocumentName(document.original_filename || document.filename || sourceDocument);
-          setSelectedDocumentId(documentId);
-          return;
-        } catch (error) {
-          console.error('Error getting PDF URL:', error);
-          // Fall through to fallback behavior
-        }
+      try {
+        // Use proxied PDF endpoint that streams with proper CORS headers
+        // The backend endpoint queries the database directly, so we don't need the document locally
+        const pdfUrl = apiService.getDocumentPdfUrl(documentId);
+        
+        // Try to get document name from local array if available, otherwise use sourceDocument
+        const document = documents.find(doc => doc.id === documentId);
+        const documentName = document?.original_filename || document?.filename || sourceDocument;
+        
+        setSelectedPdfUrl(pdfUrl);
+        setSelectedPageNumber(pageNumber || undefined);
+        setSelectedDocumentName(documentName);
+        setSelectedDocumentId(documentId);
+        return;
+      } catch (error) {
+        console.error('Error getting PDF URL:', error);
+        // Fall through to fallback behavior
       }
     }
     
