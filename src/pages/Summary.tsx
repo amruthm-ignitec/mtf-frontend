@@ -8,11 +8,8 @@ import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, L
 import FindingDetailsModal from '../components/modals/FindingDetailsModal';
 import ApprovalRejectionModal from '../components/modals/ApprovalRejectionModal';
 import { apiService } from '../services/api';
-import PhysicalAssessmentSection from '../components/donor/PhysicalAssessmentSection';
-import AuthorizationSection from '../components/donor/AuthorizationSection';
 import DRAISection from '../components/donor/DRAISection';
 import InfectiousDiseaseSection from '../components/donor/InfectiousDiseaseSection';
-import TissueRecoverySection from '../components/donor/TissueRecoverySection';
 import ComplianceSection from '../components/donor/ComplianceSection';
 import ConditionalDocumentsSection from '../components/donor/ConditionalDocumentsSection';
 import MedicalRecordsReviewSection from '../components/donor/MedicalRecordsReviewSection';
@@ -68,11 +65,8 @@ const SUMMARY_TABS = [
   { id: 'clinical', label: 'Clinical Information', icon: Heart },
   { id: 'eligibility', label: 'Eligibility Status', icon: Shield },
   { id: 'criteria', label: 'Criteria Evaluations', icon: FileCheck },
-  { id: 'physical-assessment', label: 'Physical Assessment', icon: UserCheck },
-  { id: 'authorization', label: 'Authorization', icon: FileCheck },
   { id: 'drai', label: 'DRAI', icon: User },
   { id: 'infectious-disease', label: 'Infectious Disease', icon: FlaskConical },
-  { id: 'tissue-recovery', label: 'Tissue Recovery', icon: Package },
   { id: 'conditional-docs', label: 'Conditional Tests', icon: FileSearch },
   { id: 'plasma-dilution', label: 'Plasma Dilution', icon: Droplets }
 ] as const;
@@ -1288,29 +1282,6 @@ export default function Summary() {
         );
 
 
-      case 'physical-assessment':
-        // Show partial data if available
-        if (!extractionData?.extracted_data?.physical_assessment) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Physical assessment data not available.</p>
-            </div>
-          );
-        }
-        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} documents={documents} onCitationClick={handleCitationClick} />;
-
-      case 'authorization':
-        // Check for authorization_for_tissue_donation key
-        const authorizationData = extractionData?.extracted_data?.authorization_for_tissue_donation || extractionData?.extracted_data?.authorization;
-        if (!authorizationData) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Authorization data not available.</p>
-            </div>
-          );
-        }
-        return <AuthorizationSection data={authorizationData} documents={documents} onCitationClick={handleCitationClick} />;
-
       case 'drai':
         // Try both keys - backend uses donor_risk_assessment_interview, types use drai
         const draiData = extractionData?.extracted_data?.donor_risk_assessment_interview || extractionData?.extracted_data?.drai;
@@ -1351,44 +1322,6 @@ export default function Summary() {
             onCitationClick={handleCitationClick}
           />
         );
-
-      case 'tissue-recovery':
-        // Transform eligibility object to array format for backward compatibility with TissueRecoverySection
-        const eligibilityData = extractionData?.eligibility 
-          ? [
-              ...(extractionData.eligibility.musculoskeletal ? [{
-                tissue_type: 'musculoskeletal',
-                status: extractionData.eligibility.musculoskeletal.status,
-                blocking_criteria: extractionData.eligibility.musculoskeletal.blocking_criteria || [],
-                md_discretion_criteria: extractionData.eligibility.musculoskeletal.md_discretion_criteria || []
-              }] : []),
-              ...(extractionData.eligibility.skin ? [{
-                tissue_type: 'skin',
-                status: extractionData.eligibility.skin.status,
-                blocking_criteria: extractionData.eligibility.skin.blocking_criteria || [],
-                md_discretion_criteria: extractionData.eligibility.skin.md_discretion_criteria || []
-              }] : [])
-            ]
-          : extractionData?.tissue_eligibility; // Fallback to legacy format if exists
-        
-        const tissueRecoveryData = extractionData?.extracted_data?.tissue_recovery_information || extractionData?.extracted_data?.tissue_recovery;
-        
-        // Always show the tab if we have eligibility data, even if recovery info is missing
-        if (!tissueRecoveryData && !eligibilityData) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Tissue recovery data not available.</p>
-            </div>
-          );
-        }
-        
-        return <TissueRecoverySection 
-          data={tissueRecoveryData} 
-          eligibilityData={eligibilityData}
-          documents={documents}
-          onCitationClick={handleCitationClick} 
-        />;
-
 
       case 'conditional-docs':
         if (!extractionData?.conditional_documents) {

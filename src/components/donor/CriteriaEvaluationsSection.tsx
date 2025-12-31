@@ -67,6 +67,40 @@ export default function CriteriaEvaluationsSection({
     ).join(' ');
   };
 
+  // Check if extracted_data has any actual data (not all nulls)
+  const hasActualData = (extractedData: Record<string, any>): boolean => {
+    if (!extractedData || Object.keys(extractedData).length === 0) {
+      return false;
+    }
+    
+    // Metadata fields to exclude from check
+    const metadataFields = new Set(['_criterion_name', '_extraction_timestamp']);
+    
+    for (const [key, value] of Object.entries(extractedData)) {
+      if (metadataFields.has(key)) {
+        continue;
+      }
+      
+      // Check if value is not null and not empty
+      if (value !== null && value !== undefined) {
+        if (typeof value === 'string' && value.trim() !== '') {
+          return true;
+        }
+        if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0) {
+          return true;
+        }
+        if (Array.isArray(value) && value.length > 0) {
+          return true;
+        }
+        if (typeof value !== 'string' && typeof value !== 'object') {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
   const filteredCriteria = Object.entries(criteriaEvaluations).filter(([_, evaluation]) => {
     if (filter === 'all') return true;
     return evaluation.evaluation_result === filter;
@@ -155,7 +189,7 @@ export default function CriteriaEvaluationsSection({
                     </div>
                   )}
 
-                  {evaluation.extracted_data && Object.keys(evaluation.extracted_data).length > 0 && (
+                  {evaluation.extracted_data && hasActualData(evaluation.extracted_data) && (
                     <div>
                       <p className="text-xs font-medium text-gray-500 mb-1">Extracted Data:</p>
                       <div className="bg-gray-50 rounded p-2 text-xs">

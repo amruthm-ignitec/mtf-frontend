@@ -1,15 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { InfectiousDiseaseTesting } from '../../types/extraction';
-import { FlaskConical, Building2, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { FlaskConical, Building2, FileText, CheckCircle, XCircle, Info } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
 import CitationBadge from '../ui/CitationBadge';
 import Card from '../ui/Card';
 import Table from '../ui/Table';
 import { getDocumentName, Document } from '../../utils/documentUtils';
 
+interface SerologyResultData {
+  result: string;
+  method?: string;
+  citations?: Array<{
+    document_id: number;
+    file_name: string;
+    page: number;
+  }>;
+  document_id?: number;
+  source_page?: number;
+  source_document?: string;
+}
+
 interface InfectiousDiseaseSectionProps {
   data: any; // Accept flexible data structure from backend
-  serologyResults?: Record<string, string>; // Optional serology results from extraction data
+  serologyResults?: Record<string, string | SerologyResultData>; // Optional serology results from extraction data
   cultureResults?: Array<{ 
     // Old format
     tissue_location?: string; 
@@ -22,6 +35,11 @@ interface InfectiousDiseaseSectionProps {
     specimen_date?: string;
     result?: string;
     comments?: string;
+    citations?: Array<{
+      document_id: number;
+      file_name: string;
+      page: number;
+    }>;
   }>; // Optional culture results
   criticalLabValues?: Record<string, { value: string; reference: string; unit: string }>; // Optional critical lab values
   documents?: Document[]; // Documents array for resolving document names
@@ -34,6 +52,9 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
   const extractedData = data?.extracted_data || {};
   const pages = data?.pages || [];
   const present = data?.present !== undefined ? data.present : true;
+  
+  // State for managing citation popovers
+  const [openCitationPopover, setOpenCitationPopover] = useState<string | null>(null);
   
   // Helper function to extract page number and document_id from citation
   const getCitationInfo = (citation: any): { page: number; documentId?: number } => {
@@ -220,6 +241,9 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
               const method = typeof resultData === 'object' && resultData !== null && 'method' in resultData
                 ? resultData.method
                 : null;
+              const citations = typeof resultData === 'object' && resultData !== null && 'citations' in resultData
+                ? (resultData as SerologyResultData).citations || []
+                : [];
               
               const resultStr = String(resultValue).toLowerCase().trim();
               // First check for negative patterns - if found, it's NOT positive
@@ -229,13 +253,65 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
               // Only check for positive if it's not negative
               const isPositive = !isNegative && (resultStr.includes('positive') || resultStr.includes('reactive'));
               
+              const popoverId = `citation-${testName}`;
+              const isPopoverOpen = openCitationPopover === popoverId;
+              
               return (
                 <div
                   key={testName}
-                  className="bg-white rounded-lg border border-gray-200 p-3"
+                  className="bg-white rounded-lg border border-gray-200 p-3 relative"
                 >
-                  <div className="text-xs font-medium text-gray-700 mb-1.5">
-                    {testName}
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div className="text-xs font-medium text-gray-700 flex-1">
+                      {testName}
+                    </div>
+                    {citations.length > 0 && (
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenCitationPopover(isPopoverOpen ? null : popoverId);
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          aria-label="View citations"
+                        >
+                          <Info className="w-4 h-4 text-blue-600" />
+                        </button>
+                        {isPopoverOpen && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setOpenCitationPopover(null)}
+                            />
+                            <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[250px] max-w-[350px]">
+                              <div className="text-xs font-semibold text-gray-700 mb-2">Citations</div>
+                              <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {citations.map((citation, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (onCitationClick) {
+                                        onCitationClick(
+                                          citation.file_name,
+                                          citation.page,
+                                          citation.document_id
+                                        );
+                                      }
+                                      setOpenCitationPopover(null);
+                                    }}
+                                    className="w-full text-left p-2 hover:bg-blue-50 rounded text-xs text-gray-700 border border-gray-200 hover:border-blue-300 transition-colors"
+                                  >
+                                    <div className="font-medium">{citation.file_name}</div>
+                                    <div className="text-gray-500">Page {citation.page}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {method && (
                     <div className="text-xs text-gray-500 mb-1 italic">
