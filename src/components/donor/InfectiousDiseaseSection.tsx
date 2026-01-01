@@ -425,6 +425,137 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
         </Card>
       )}
 
+      {/* Culture Results Section - Display independently */}
+      {cultureResults && cultureResults.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="h-1 w-1 bg-purple-600 rounded-full"></div>
+            <h3 className="text-lg font-semibold text-gray-900">Culture Results</h3>
+          </div>
+          <div className="space-y-4">
+            {cultureResults.map((culture, idx) => {
+              // Check if it's new format (has test_name or result) or old format (has tissue_location or microorganism)
+              const isNewFormat = culture.test_name || culture.result;
+              const isOldFormat = culture.tissue_location || culture.microorganism;
+              
+              if (isNewFormat) {
+                // New format: test_name, result, test_method, specimen_type, specimen_date, comments
+                const resultValue = culture.result || '';
+                const resultLower = resultValue.toLowerCase();
+                // Determine if there's growth - positive findings
+                // Check for negative indicators first (no growth)
+                let hasGrowth = false;
+                if (resultValue && 
+                    !resultLower.includes('no growth') &&
+                    !(resultLower.includes('normal') && !resultLower.includes('positive'))) {
+                  // Check for positive indicators (growth detected)
+                  hasGrowth = resultLower.includes('detected') ||
+                    resultLower.includes('positive') ||
+                    resultLower.includes('staphylococcus') ||
+                    resultLower.includes('bacteria') ||
+                    resultLower.includes('organism') ||
+                    resultLower.includes('cocci') ||
+                    resultLower.includes('species') ||
+                    (resultValue.length > 10); // If it's a substantial result, likely growth
+                }
+                
+                return (
+                  <div 
+                    key={idx}
+                    className="bg-white rounded-lg border border-gray-200 p-4"
+                  >
+                    <div className="text-xs font-semibold text-gray-900 mb-2">
+                      {culture.test_name || 'Culture'}
+                    </div>
+                    <div className={`text-sm font-semibold mb-1 ${
+                      hasGrowth ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {resultValue || 'No Result'}
+                    </div>
+                    {culture.test_method && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Method: {culture.test_method}
+                      </div>
+                    )}
+                    {culture.specimen_type && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Specimen: {culture.specimen_type}
+                      </div>
+                    )}
+                    {culture.specimen_date && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Date: {culture.specimen_date}
+                      </div>
+                    )}
+                    {culture.comments && (
+                      <div className={`text-xs mt-2 pt-2 border-t ${
+                        hasGrowth 
+                          ? 'text-red-700 border-red-100 font-medium' 
+                          : 'text-gray-500 border-gray-100'
+                      }`}>
+                        {culture.comments}
+                      </div>
+                    )}
+                  </div>
+                );
+              } else if (isOldFormat) {
+                // Old format: tissue_location, microorganism
+                const hasGrowth = culture.microorganism && 
+                  culture.microorganism.toLowerCase() !== 'no growth' && 
+                  culture.microorganism.toLowerCase() !== 'negative';
+                const microorganism = culture.microorganism || 'No Growth';
+                
+                return (
+                  <div 
+                    key={idx}
+                    className="bg-white rounded-lg border border-gray-200 p-4"
+                  >
+                    <div className="text-xs font-semibold text-gray-900 mb-2">
+                      {culture.tissue_location || 'Culture'}
+                    </div>
+                    <div className={`text-sm font-semibold mb-1 ${
+                      hasGrowth ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {microorganism}
+                    </div>
+                    {(culture as any).collection_date && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Collected: {(culture as any).collection_date}
+                      </div>
+                    )}
+                    {(culture as any).preliminary_result && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {(culture as any).preliminary_result}
+                      </div>
+                    )}
+                    {(culture as any).status && (culture as any).status.toLowerCase() === 'pending' && (
+                      <div className="text-xs text-orange-600 font-medium mt-1">
+                        Pending
+                      </div>
+                    )}
+                  </div>
+                );
+              } else {
+                // Fallback for unknown format
+                return (
+                  <div 
+                    key={idx}
+                    className="bg-white rounded-lg border border-gray-200 p-4"
+                  >
+                    <div className="text-xs font-semibold text-gray-900 mb-2">
+                      Culture
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {JSON.stringify(culture)}
+                    </div>
+                  </div>
+                );
+              }
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* Serology Report - Old Structure Support */}
       {serology_report && (
         <Card className="p-8">
@@ -508,15 +639,15 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                 </div>
               </div>
 
-              {/* Culture Results - 1 column, stacked */}
-              <div className="col-span-1 flex flex-col">
-                <div className="flex items-center space-x-2 mb-5">
-                  <div className="h-1 w-1 bg-purple-600 rounded-full"></div>
-                  <h4 className="text-base font-bold text-gray-900">Culture Results</h4>
-                </div>
-                <div className="space-y-4 flex-1">
-                  {cultureResults && cultureResults.length > 0 ? (
-                    cultureResults.map((culture, idx) => {
+              {/* Culture Results - 1 column, stacked (only shown if serology_report exists) */}
+              {cultureResults && cultureResults.length > 0 && (
+                <div className="col-span-1 flex flex-col">
+                  <div className="flex items-center space-x-2 mb-5">
+                    <div className="h-1 w-1 bg-purple-600 rounded-full"></div>
+                    <h4 className="text-base font-bold text-gray-900">Culture Results</h4>
+                  </div>
+                  <div className="space-y-4 flex-1">
+                    {cultureResults.map((culture, idx) => {
                       // Check if it's new format (has test_name or result) or old format (has tissue_location or microorganism)
                       const isNewFormat = culture.test_name || culture.result;
                       const isOldFormat = culture.tissue_location || culture.microorganism;
@@ -634,14 +765,10 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                           </div>
                         );
                       }
-                    })
-                  ) : (
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
-                      <p className="text-sm text-gray-500">No culture results available</p>
-                    </div>
-                  )}
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Row 2: Critical Lab Values (1/2) + Sample Information (1/2) */}
