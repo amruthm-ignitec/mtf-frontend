@@ -1302,45 +1302,36 @@ export default function Summary() {
                     Medical History
                   </h3>
                   <div className="space-y-3">
-                    {extractionData.extracted_data.medical_records_review_summary.summary && (
+                    {extractionData.extracted_data.medical_records_review_summary && (
                       <>
-                        {extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses && (
+                        {/* Use extracted_data for arrays, summary for strings */}
+                        {extractionData.extracted_data.medical_records_review_summary.extracted_data?.Diagnoses && 
+                         Array.isArray(extractionData.extracted_data.medical_records_review_summary.extracted_data.Diagnoses) &&
+                         extractionData.extracted_data.medical_records_review_summary.extracted_data.Diagnoses.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-gray-500 mb-2">Diagnoses</h4>
                             <ul className="space-y-1.5">
-                              {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses) ? (
-                                extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses.slice(0, 5).map((diag: string, idx: number) => (
-                                  <li key={idx} className="flex items-start text-sm">
-                                    <span className="text-gray-500 mr-2">•</span>
-                                    <span>{diag || '-'}</span>
-                                  </li>
-                                ))
-                              ) : (
-                                <li className="flex items-start text-sm">
+                              {extractionData.extracted_data.medical_records_review_summary.extracted_data.Diagnoses.slice(0, 5).map((diag: string, idx: number) => (
+                                <li key={idx} className="flex items-start text-sm">
                                   <span className="text-gray-500 mr-2">•</span>
-                                  <span>{extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses ? String(extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses) : '-'}</span>
+                                  <span>{diag || '-'}</span>
                                 </li>
-                              )}
+                              ))}
                             </ul>
                           </div>
                         )}
-                        {extractionData.extracted_data.medical_records_review_summary.summary.Procedures && (
+                        {extractionData.extracted_data.medical_records_review_summary.extracted_data?.Procedures && 
+                         Array.isArray(extractionData.extracted_data.medical_records_review_summary.extracted_data.Procedures) &&
+                         extractionData.extracted_data.medical_records_review_summary.extracted_data.Procedures.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-gray-500 mb-2">Procedures</h4>
                             <ul className="space-y-1.5">
-                              {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Procedures) ? (
-                                extractionData.extracted_data.medical_records_review_summary.summary.Procedures.slice(0, 3).map((proc: string, idx: number) => (
-                                  <li key={idx} className="flex items-start text-sm">
-                                    <span className="text-gray-500 mr-2">•</span>
-                                    <span>{proc || '-'}</span>
-                                  </li>
-                                ))
-                              ) : (
-                                <li className="flex items-start text-sm">
+                              {extractionData.extracted_data.medical_records_review_summary.extracted_data.Procedures.slice(0, 3).map((proc: string, idx: number) => (
+                                <li key={idx} className="flex items-start text-sm">
                                   <span className="text-gray-500 mr-2">•</span>
-                                  <span>{extractionData.extracted_data.medical_records_review_summary.summary.Procedures ? String(extractionData.extracted_data.medical_records_review_summary.summary.Procedures) : '-'}</span>
+                                  <span>{proc || '-'}</span>
                                 </li>
-                              )}
+                              ))}
                             </ul>
                           </div>
                         )}
@@ -1445,19 +1436,17 @@ export default function Summary() {
                         </div>
                       </div>
                     </div>
-                    {extractionData.extracted_data?.medical_records_review_summary?.summary?.Medications && (
+                    {extractionData.extracted_data?.medical_records_review_summary?.extracted_data?.Medications && 
+                     Array.isArray(extractionData.extracted_data.medical_records_review_summary.extracted_data.Medications) &&
+                     extractionData.extracted_data.medical_records_review_summary.extracted_data.Medications.length > 0 && (
                       <div>
                         <h4 className="text-xs font-medium text-gray-500 mb-2">Medications</h4>
                         <div className="bg-gray-50 p-2 rounded">
-                          {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Medications) ? (
-                            <ul className="space-y-1">
-                              {extractionData.extracted_data.medical_records_review_summary.summary.Medications.slice(0, 3).map((med: string, idx: number) => (
-                                <li key={idx} className="text-xs text-gray-700">• {med || '-'}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-xs text-gray-700">{extractionData.extracted_data.medical_records_review_summary.summary.Medications ? String(extractionData.extracted_data.medical_records_review_summary.summary.Medications) : '-'}</p>
-                          )}
+                          <ul className="space-y-1">
+                            {extractionData.extracted_data.medical_records_review_summary.extracted_data.Medications.slice(0, 3).map((med: string, idx: number) => (
+                              <li key={idx} className="text-xs text-gray-700">• {med || '-'}</li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     )}
