@@ -571,7 +571,11 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                               </div>
                             )}
                             {culture.comments && (
-                              <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
+                              <div className={`text-xs mt-2 pt-2 border-t ${
+                                hasGrowth 
+                                  ? 'text-red-700 border-red-100 font-medium' 
+                                  : 'text-gray-500 border-gray-100'
+                              }`}>
                                 {culture.comments}
                               </div>
                             )}

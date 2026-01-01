@@ -5,10 +5,14 @@ import { CriteriaEvaluation } from '../../types/extraction';
 
 interface CriteriaEvaluationsSectionProps {
   criteriaEvaluations?: Record<string, CriteriaEvaluation>;
+  documents?: Array<{ id: number; original_filename?: string; filename?: string }>;
+  onCitationClick?: (sourceDocument: string, pageNumber?: number, documentId?: number) => void;
 }
 
 export default function CriteriaEvaluationsSection({ 
-  criteriaEvaluations 
+  criteriaEvaluations,
+  documents = [],
+  onCitationClick
 }: CriteriaEvaluationsSectionProps) {
   const [expandedCriteria, setExpandedCriteria] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | 'acceptable' | 'unacceptable' | 'md_discretion'>('all');
@@ -249,7 +253,7 @@ export default function CriteriaEvaluationsSection({
                     <div>
                       <p className="text-xs font-medium text-gray-500 mb-1">Tissue Types:</p>
                       <div className="flex gap-2">
-                        {evaluation.tissue_types.map((tissueType, idx) => (
+                        {Array.from(new Set(evaluation.tissue_types)).map((tissueType, idx) => (
                           <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
                             {tissueType}
                           </span>
@@ -262,15 +266,36 @@ export default function CriteriaEvaluationsSection({
                     <div>
                       <p className="text-xs font-medium text-gray-500 mb-2">Extracted Data:</p>
                       <div className="flex flex-wrap gap-2">
-                        {getExtractedDataBadges(evaluation.extracted_data).map((badge, idx) => (
-                          <div
-                            key={idx}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-md text-xs"
-                          >
-                            <span className="font-medium text-blue-900">{badge.key}:</span>
-                            <span className="text-blue-700">{badge.value}</span>
-                          </div>
-                        ))}
+                        {getExtractedDataBadges(evaluation.extracted_data).map((badge, idx) => {
+                          // Get document_id from evaluation (if available)
+                          const documentIds = (evaluation as any).document_ids || [];
+                          const firstDocumentId = documentIds.length > 0 ? documentIds[0] : null;
+                          const document = firstDocumentId ? documents.find(d => d.id === firstDocumentId) : null;
+                          const documentName = document?.original_filename || document?.filename || 'Document';
+                          
+                          // Make badge clickable if we have document info and onCitationClick handler
+                          const isClickable = firstDocumentId && onCitationClick;
+                          
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => {
+                                if (isClickable && onCitationClick) {
+                                  onCitationClick(documentName, undefined, firstDocumentId);
+                                }
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs ${
+                                isClickable
+                                  ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 cursor-pointer transition-colors'
+                                  : 'bg-blue-50 border border-blue-200'
+                              }`}
+                              title={isClickable ? `Click to view source document: ${documentName}` : undefined}
+                            >
+                              <span className="font-medium text-blue-900">{badge.key}:</span>
+                              <span className="text-blue-700">{badge.value}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -406,6 +406,7 @@ export interface CriteriaEvaluation {
   evaluation_result: 'acceptable' | 'unacceptable' | 'md_discretion';
   evaluation_reasoning?: string;
   tissue_types?: string[];
+  document_ids?: number[]; // Document IDs where this criterion data was extracted from
 }
 
 // Eligibility Status

@@ -1250,6 +1250,15 @@ export default function Summary() {
                                       {parsedCulture.preliminary_result}
                                     </div>
                                   )}
+                                  {parsedCulture?.comments && (
+                                    <div className={`text-xs mt-2 pt-2 border-t ${
+                                      hasGrowth 
+                                        ? 'text-red-700 border-red-100 font-medium' 
+                                        : 'text-gray-500 border-gray-100'
+                                    }`}>
+                                      {parsedCulture.comments}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             } else {
@@ -1529,7 +1538,13 @@ export default function Summary() {
         return <EligibilityStatusSection eligibility={extractionData?.eligibility} />;
 
       case 'criteria':
-        return <CriteriaEvaluationsSection criteriaEvaluations={extractionData?.criteria_evaluations} />;
+        return (
+          <CriteriaEvaluationsSection 
+            criteriaEvaluations={extractionData?.criteria_evaluations}
+            documents={documents}
+            onCitationClick={handleCitationClick}
+          />
+        );
 
       default:
         return null;
