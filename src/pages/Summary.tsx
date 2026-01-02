@@ -1374,26 +1374,70 @@ export default function Summary() {
                       <div className="bg-yellow-50 p-3 rounded">
                         <h4 className="text-xs font-medium text-yellow-800 mb-2">Risk Factors</h4>
                         <ul className="space-y-1 text-sm text-yellow-700">
-                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).map(([key, value]) => (
+                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).slice(0, 5).map(([key, value]) => (
                             <li key={key} className="flex items-start">
                               <CheckCircle className="w-4 h-4 mr-1.5 text-green-500 mt-0.5" />
                               <span>{key || '-'}: {value ? String(value) : '-'}</span>
                             </li>
                           ))}
                         </ul>
+                        {Object.keys(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).length > 5 && (
+                          <div className="mt-2">
+                            <a
+                              href="#drai"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleTabChange('drai');
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                            >
+                              View Full DRAI <ChevronRight className="w-3 h-3 ml-1" />
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                     {extractionData.extracted_data.donor_risk_assessment_interview.extracted_data?.Social_History && (
                       <div className="bg-blue-50 p-3 rounded">
                         <h4 className="text-xs font-medium text-blue-800 mb-2">Social History</h4>
                         <ul className="space-y-1 text-sm text-blue-700">
-                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).map(([key, value]) => (
+                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).slice(0, 5).map(([key, value]) => (
                             <li key={key} className="flex items-start">
                               <CheckCircle className="w-4 h-4 mr-1.5 text-green-500 mt-0.5" />
                               <span>{key || '-'}: {value ? String(value) : '-'}</span>
                             </li>
                           ))}
                         </ul>
+                        {Object.keys(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).length > 5 && (
+                          <div className="mt-2">
+                            <a
+                              href="#drai"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleTabChange('drai');
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                            >
+                              View Full DRAI <ChevronRight className="w-3 h-3 ml-1" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Show "View Full DRAI" link if there are other sections (Medical_History, Additional_Information) not shown above */}
+                    {(Object.keys(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data?.Medical_History || {}).length > 0 ||
+                      extractionData.extracted_data.donor_risk_assessment_interview.extracted_data?.Additional_Information) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <a
+                          href="#drai"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleTabChange('drai');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                        >
+                          View Full DRAI <ChevronRight className="w-3 h-3 ml-1" />
+                        </a>
                       </div>
                     )}
                   </div>
