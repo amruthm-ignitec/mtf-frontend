@@ -459,13 +459,67 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                     (resultValue.length > 10); // If it's a substantial result, likely growth
                 }
                 
+                // Extract citations for culture results
+                const citations = culture.citations || [];
+                const popoverId = `culture-citation-${idx}`;
+                const isPopoverOpen = openCitationPopover === popoverId;
+                
                 return (
                   <div 
                     key={idx}
-                    className="bg-white rounded-lg border border-gray-200 p-4"
+                    className="bg-white rounded-lg border border-gray-200 p-4 relative"
                   >
-                    <div className="text-xs font-semibold text-gray-900 mb-2">
-                      {culture.test_name || 'Culture'}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="text-xs font-semibold text-gray-900 flex-1">
+                        {culture.test_name || 'Culture'}
+                      </div>
+                      {citations.length > 0 && (
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenCitationPopover(isPopoverOpen ? null : popoverId);
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            aria-label="View citations"
+                          >
+                            <Info className="w-4 h-4 text-blue-600" />
+                          </button>
+                          {isPopoverOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setOpenCitationPopover(null)}
+                              />
+                              <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[250px] max-w-[350px]">
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Citations</div>
+                                <div className="space-y-2 max-h-64 overflow-y-auto">
+                                  {citations.map((citation: any, citationIdx: number) => (
+                                    <button
+                                      key={citationIdx}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (onCitationClick) {
+                                          onCitationClick(
+                                            citation.file_name,
+                                            citation.page,
+                                            citation.document_id
+                                          );
+                                        }
+                                        setOpenCitationPopover(null);
+                                      }}
+                                      className="w-full text-left p-2 hover:bg-blue-50 rounded text-xs text-gray-700 border border-gray-200 hover:border-blue-300 transition-colors"
+                                    >
+                                      <div className="font-medium">{citation.file_name}</div>
+                                      <div className="text-gray-500">Page {citation.page}</div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className={`text-sm font-semibold mb-1 ${
                       hasGrowth ? 'text-red-600' : 'text-green-600'
@@ -673,13 +727,67 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
                             (resultValue.length > 10); // If it's a substantial result, likely growth
                         }
                         
+                        // Extract citations for culture results
+                        const citations = culture.citations || [];
+                        const popoverId = `culture-citation-serology-${idx}`;
+                        const isPopoverOpen = openCitationPopover === popoverId;
+                        
                         return (
                           <div 
                             key={idx}
-                            className="bg-white rounded-lg border border-gray-200 p-4"
+                            className="bg-white rounded-lg border border-gray-200 p-4 relative"
                           >
-                            <div className="text-xs font-semibold text-gray-900 mb-2">
-                              {culture.test_name || 'Culture'}
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="text-xs font-semibold text-gray-900 flex-1">
+                                {culture.test_name || 'Culture'}
+                              </div>
+                              {citations.length > 0 && (
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenCitationPopover(isPopoverOpen ? null : popoverId);
+                                    }}
+                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                    aria-label="View citations"
+                                  >
+                                    <Info className="w-4 h-4 text-blue-600" />
+                                  </button>
+                                  {isPopoverOpen && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setOpenCitationPopover(null)}
+                                      />
+                                      <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[250px] max-w-[350px]">
+                                        <div className="text-xs font-semibold text-gray-700 mb-2">Citations</div>
+                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                          {citations.map((citation: any, citationIdx: number) => (
+                                            <button
+                                              key={citationIdx}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (onCitationClick) {
+                                                  onCitationClick(
+                                                    citation.file_name,
+                                                    citation.page,
+                                                    citation.document_id
+                                                  );
+                                                }
+                                                setOpenCitationPopover(null);
+                                              }}
+                                              className="w-full text-left p-2 hover:bg-blue-50 rounded text-xs text-gray-700 border border-gray-200 hover:border-blue-300 transition-colors"
+                                            >
+                                              <div className="font-medium">{citation.file_name}</div>
+                                              <div className="text-gray-500">Page {citation.page}</div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className={`text-sm font-semibold mb-1 ${
                               hasGrowth ? 'text-red-600' : 'text-green-600'

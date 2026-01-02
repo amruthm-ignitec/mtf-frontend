@@ -529,6 +529,24 @@ export default function Summary() {
               // Check if document is present using extraction data
               const isDocumentPresent = (extractionKey: string): boolean => {
                 if (!extractionData?.extracted_data) return false;
+                
+                // Special handling for infectious_disease_testing: check for actual test results
+                if (extractionKey === 'infectious_disease_testing') {
+                  // Check if document presence flag is true
+                  const section = extractionData.extracted_data[extractionKey];
+                  if (section?.present === true) return true;
+                  
+                  // Also check if we have actual test results (serology or culture)
+                  const hasSerology = extractionData?.serology_results?.result && 
+                    Object.keys(extractionData.serology_results.result).length > 0;
+                  const hasCulture = extractionData?.culture_results?.result && 
+                    extractionData.culture_results.result.length > 0;
+                  
+                  // If we have test results, consider it present
+                  return hasSerology || hasCulture;
+                }
+                
+                // For other document types, check the present flag
                 const section = extractionData.extracted_data[extractionKey];
                 return section?.present === true;
               };
