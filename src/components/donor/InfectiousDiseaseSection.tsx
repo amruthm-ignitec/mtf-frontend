@@ -50,7 +50,7 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
   // Handle both old structure and new backend structure
   const summary = data?.summary || {};
   const extractedData = data?.extracted_data || {};
-  const pages = data?.pages || [];
+  const pages = Array.isArray(data?.pages) ? data.pages : [];
   const present = data?.present !== undefined ? data.present : true;
   
   // State for managing citation popovers
@@ -142,7 +142,7 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
   const hasTestResults = testResults.length > 0;
   const hasSerologyReport = !!serology_report;
   const hasSerologyResults = serologyResults && Object.keys(serologyResults).length > 0;
-  const hasCultureResults = cultureResults && cultureResults.length > 0;
+  const hasCultureResults = Array.isArray(cultureResults) && cultureResults.length > 0;
   const hasCriticalLabValues = criticalLabValues && Object.keys(criticalLabValues).length > 0;
   const hasOtherTests = other_tests && Object.keys(other_tests).length > 0;
   const hasPages = pages && pages.length > 0;
@@ -426,7 +426,7 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
       )}
 
       {/* Culture Results Section - Display independently */}
-      {cultureResults && cultureResults.length > 0 && (
+      {Array.isArray(cultureResults) && cultureResults.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <div className="h-1 w-1 bg-purple-600 rounded-full"></div>
@@ -694,7 +694,7 @@ export default function InfectiousDiseaseSection({ data, serologyResults, cultur
               </div>
 
               {/* Culture Results - 1 column, stacked (only shown if serology_report exists) */}
-              {cultureResults && cultureResults.length > 0 && (
+              {Array.isArray(cultureResults) && cultureResults.length > 0 && (
                 <div className="col-span-1 flex flex-col">
                   <div className="flex items-center space-x-2 mb-5">
                     <div className="h-1 w-1 bg-purple-600 rounded-full"></div>

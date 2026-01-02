@@ -539,7 +539,7 @@ export default function Summary() {
                   // Also check if we have actual test results (serology or culture)
                   const hasSerology = extractionData?.serology_results?.result && 
                     Object.keys(extractionData.serology_results.result).length > 0;
-                  const hasCulture = extractionData?.culture_results?.result && 
+                  const hasCulture = Array.isArray(extractionData?.culture_results?.result) && 
                     extractionData.culture_results.result.length > 0;
                   
                   // If we have test results, consider it present
@@ -1067,7 +1067,7 @@ export default function Summary() {
       case 'clinical':
         // Check if any clinical data is available
         const clinicalHasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
-        const clinicalHasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
+        const clinicalHasCulture = Array.isArray(extractionData?.culture_results?.result) && extractionData.culture_results.result.length > 0;
         const clinicalHasTerminalInfo = extractionData?.terminal_information;
         
         // If no clinical data is available, show empty state
@@ -1161,7 +1161,7 @@ export default function Summary() {
                   {/* Culture Results */}
                   <div>
                     <h4 className="text-xs font-medium text-gray-500 mb-2">Culture Results</h4>
-                    {extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0 ? (
+                    {Array.isArray(extractionData?.culture_results?.result) && extractionData.culture_results.result.length > 0 ? (
                       <>
                         <div className="grid grid-cols-2 gap-3">
                           {extractionData.culture_results.result.slice(0, 2).map((culture: any, idx: number) => {
@@ -1539,7 +1539,7 @@ export default function Summary() {
         // Show infectious disease tab if we have any related data
         const infectiousDiseaseData = extractionData?.extracted_data?.infectious_disease_testing;
         const hasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
-        const hasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
+        const hasCulture = Array.isArray(extractionData?.culture_results?.result) && extractionData.culture_results.result.length > 0;
         const hasCriticalLabs = extractionData?.critical_lab_values && Object.values(extractionData.critical_lab_values).some(v => v !== null);
         
         if (!infectiousDiseaseData && !hasSerology && !hasCulture && !hasCriticalLabs) {
