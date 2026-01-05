@@ -184,6 +184,31 @@ class ApiService {
     return this.request<ExtractionDataResponse>(`/donors/${donorId}/extraction-data`);
   }
 
+  async getDonorEligibility(donorId: number): Promise<{
+    donor_id: string;
+    eligibility: {
+      musculoskeletal?: {
+        status: string;
+        blocking_criteria: any[];
+        md_discretion_criteria: any[];
+        evaluated_at?: string;
+      };
+      skin?: {
+        status: string;
+        blocking_criteria: any[];
+        md_discretion_criteria: any[];
+        evaluated_at?: string;
+      };
+    };
+    criteria_evaluations: Record<string, any>;
+  }> {
+    return this.request(`/donors/${donorId}/eligibility`);
+  }
+
+  async getQueueDetails(): Promise<any[]> {
+    return this.request<any[]>('/donors/queue/details');
+  }
+
   // User management methods (Admin only)
   async getUsers(): Promise<User[]> {
     return this.request<User[]>('/users');

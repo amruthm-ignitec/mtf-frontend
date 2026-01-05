@@ -144,7 +144,7 @@ export default function ConditionalDocumentsSection({
             <div>
               <label className="text-sm font-medium text-gray-500">Toxicology Screening</label>
               <p className="text-sm text-gray-900 mt-1">
-                {toxicology_report.toxicology_screening_status.performed ? 'Performed' : 'Not Performed'}
+                {toxicology_report.toxicology_screening_status?.performed ? 'Performed' : 'Not Performed'}
               </p>
             </div>
             {toxicology_report.source_document && toxicology_report.source_pages && toxicology_report.source_pages.length > 0 && (() => {
