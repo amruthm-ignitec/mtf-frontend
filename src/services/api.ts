@@ -270,13 +270,25 @@ class ApiService {
     return this.request<DonorApprovalResponse>(`/donor-approvals/${approvalId}`);
   }
 
-  // User Feedback methods
+  // Platform Feedback methods
   async getFeedbacks(): Promise<Array<{ id: number; username: string; feedback: string; created_at: string }>> {
     return this.request<Array<{ id: number; username: string; feedback: string; created_at: string }>>('/feedback');
   }
 
   async createFeedback(text: string): Promise<{ id: number; username: string; feedback: string; created_at: string }> {
     return this.request<{ id: number; username: string; feedback: string; created_at: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  // Donor Feedback methods
+  async getDonorFeedbacks(donorId: number): Promise<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>> {
+    return this.request<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>>(`/donors/${donorId}/feedback`);
+  }
+
+  async createDonorFeedback(donorId: number, text: string): Promise<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }> {
+    return this.request<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>(`/donors/${donorId}/feedback`, {
       method: 'POST',
       body: JSON.stringify({ text }),
     });

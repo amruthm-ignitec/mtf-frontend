@@ -10,7 +10,7 @@ interface Feedback {
   created_at: string;
 }
 
-export default function UserFeedback() {
+export default function PlatformFeedback() {
   const { user } = useAuth();
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -79,7 +79,7 @@ export default function UserFeedback() {
         <div className="p-6 border-b">
           <div className="flex items-center">
             <MessageSquare className="w-6 h-6 mr-2 text-blue-600" />
-            <h1 className="text-2xl font-semibold text-gray-900">User Feedback</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">Platform Feedback</h1>
           </div>
           <p className="mt-2 text-sm text-gray-500">
             Share your thoughts, suggestions, or report issues. Everyone can see all feedback.
