@@ -290,83 +290,43 @@ export default function DonorManagement() {
     {
       key: 'donor',
       title: 'Donor',
+      className: 'w-64',
       render: (donor: DonorWithDetails & { isLatestDonor?: boolean }) => (
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-          <div className="text-sm font-medium text-gray-900">{donor.name}</div>
-        <button
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="text-sm font-medium text-gray-900">{donor.name}</div>
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleTogglePriority(donor.id, donor.is_priority);
               }}
               className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            donor.is_priority
-              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          <Star className={`w-3 h-3 mr-1 ${donor.is_priority ? 'text-yellow-600' : 'text-gray-400'}`} />
-          {donor.is_priority ? 'High Priority' : 'Normal'}
-        </button>
+                donor.is_priority
+                  ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+              }`}
+            >
+              <Star className={`w-3 h-3 mr-1 ${donor.is_priority ? 'text-yellow-600' : 'text-gray-400'}`} />
+              {donor.is_priority ? 'High Priority' : 'Normal'}
+            </button>
+            {hasCriticalFindings(donor) && (
+              <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Critical
+              </div>
+            )}
           </div>
           <div className="text-xs text-gray-500">ID: {donor.unique_donor_id}</div>
           <div className="text-xs text-gray-600">
             {getAgeDisplay(donor)} • {donor.gender}
           </div>
-          {hasCriticalFindings(donor) && (
-            <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              Critical Finding
-            </div>
-          )}
         </div>
       )
     },
     {
-      key: 'critical_findings',
-      title: 'Critical Findings',
-      render: (donor: DonorWithDetails) => {
-        // Only show if donor has documents uploaded
-        if (!donor.hasDocuments) {
-          return <span className="text-xs text-gray-400">—</span>;
-        }
-        
-        // Check if we have critical findings data available
-        if (!hasCriticalFindingsData(donor)) {
-          // Data not available yet - might still be processing
-          return (
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-400">Processing...</span>
-            </div>
-          );
-        }
-        
-        // Data is available - check if there are critical findings
-        return (
-          <div className="space-y-2 min-w-[200px]">
-            {hasCriticalFindings(donor) ? (
-              <>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  Critical Finding
-                </span>
-                {donor.rejectionReason && (
-                  <div className="text-xs text-red-600 mt-1">
-                    {donor.rejectionReason}
-                  </div>
-                )}
-              </>
-            ) : (
-              <span className="text-xs text-gray-400">No critical findings</span>
-            )}
-          </div>
-        );
-      }
-    },
-    {
       key: 'missing_documents',
-      title: 'Missing Documents',
+      title: 'Documents',
+      className: 'w-64',
       render: (donor: DonorWithDetails) => {
         // Only show if donor has documents uploaded
         if (!donor.hasDocuments) {
@@ -386,36 +346,42 @@ export default function DonorManagement() {
         const hasMissingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'missing');
         
         return (
-          <div className="space-y-2 min-w-[250px]">
+          <div className="space-y-1.5">
             {isPendingOrProcessing ? (
-              <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-yellow-800">
-                  <p className="font-medium mb-1">Documents are currently being processed</p>
-                  <p className="text-yellow-700">Please check back later. Missing documents will be shown once processing is complete.</p>
+              <div className="flex items-start gap-1.5 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <AlertTriangle className="h-3 w-3 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="text-yellow-800">
+                  <p className="font-medium">Processing...</p>
+                  <p className="text-yellow-700 text-xs">Check back later</p>
                 </div>
               </div>
             ) : shouldShowMissingDocs && hasMissingDocs ? (
               <>
-                <div className="flex items-center text-yellow-600 text-sm mb-1">
-                  <AlertTriangle className="h-4 w-4 mr-1" />
-                  Missing required documents
+                <div className="flex items-center text-yellow-600 text-xs mb-1">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Missing:
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1">
                   {donor.requiredDocuments!
                     .filter(doc => doc.status === 'missing')
+                    .slice(0, 2)
                     .map((doc, index) => (
                       <span
                         key={index}
-                        className={`${getDocumentStatusBadge('missing')} flex items-center`}
+                        className={`${getDocumentStatusBadge('missing')} text-xs`}
                       >
-                        {doc.label}: missing
+                        {doc.label}
                       </span>
                     ))}
+                  {donor.requiredDocuments!.filter(doc => doc.status === 'missing').length > 2 && (
+                    <span className="text-xs text-gray-500">
+                      +{donor.requiredDocuments!.filter(doc => doc.status === 'missing').length - 2} more
+                    </span>
+                  )}
                 </div>
               </>
             ) : shouldShowMissingDocs && !hasMissingDocs ? (
-              <span className="text-xs text-gray-400">All documents present</span>
+              <span className="text-xs text-green-600">All present</span>
             ) : (
               <span className="text-xs text-gray-400">—</span>
             )}
@@ -426,6 +392,7 @@ export default function DonorManagement() {
     {
       key: 'status',
       title: 'Status',
+      className: 'w-32',
       render: (donor: DonorWithDetails & { isLatestDonor?: boolean }) => {
         // Only show if donor has documents uploaded
         if (!donor.hasDocuments) {
@@ -452,17 +419,26 @@ export default function DonorManagement() {
     },
     {
       key: 'created',
-      title: 'Created Date',
-      render: (donor: Donor) => (
-        <span className="text-sm text-gray-500">{formatDate(donor.created_at)}</span>
-      )
+      title: 'Date',
+      className: 'w-28',
+      render: (donor: Donor) => {
+        const date = new Date(donor.created_at);
+        const month = date.toLocaleDateString('en-US', { month: 'short' });
+        const day = date.getDate();
+        const year = date.getFullYear();
+        return (
+          <span className="text-xs text-gray-500" title={formatDate(donor.created_at)}>
+            {month} {day}, {year}
+          </span>
+        );
+      }
     },
     {
       key: 'actions',
-      title: 'Actions',
-      className: 'text-right',
+      title: '',
+      className: 'w-24 text-right',
       render: (donor: Donor) => (
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end space-x-1">
           <button
             onClick={() => navigate(`/documents/${donor.id}`)}
             className="text-blue-600 hover:bg-blue-100 p-1 rounded"
