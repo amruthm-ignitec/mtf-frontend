@@ -309,81 +309,59 @@ export default function DonorManagement() {
               <Star className={`w-3 h-3 mr-1 ${donor.is_priority ? 'text-yellow-600' : 'text-gray-400'}`} />
               {donor.is_priority ? 'High Priority' : 'Normal'}
             </button>
-            {hasCriticalFindings(donor) && (
-              <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Critical
-              </div>
-            )}
           </div>
           <div className="text-xs text-gray-500">ID: {donor.unique_donor_id}</div>
           <div className="text-xs text-gray-600">
             {getAgeDisplay(donor)} • {donor.gender}
+            {(() => {
+              const date = new Date(donor.created_at);
+              const month = date.toLocaleDateString('en-US', { month: 'short' });
+              const day = date.getDate();
+              const year = date.getFullYear();
+              return ` • ${month} ${day}, ${year}`;
+            })()}
           </div>
         </div>
       )
     },
     {
-      key: 'missing_documents',
-      title: 'Documents',
-      className: 'w-64',
+      key: 'critical_findings',
+      title: 'Critical Findings',
+      className: 'w-48',
       render: (donor: DonorWithDetails) => {
         // Only show if donor has documents uploaded
         if (!donor.hasDocuments) {
           return <span className="text-xs text-gray-400">—</span>;
         }
         
-        // Get the processing status
-        const status = donor.processingStatus || 'pending';
+        // Check if we have critical findings data available
+        if (!hasCriticalFindingsData(donor)) {
+          // Data not available yet - might still be processing
+          return (
+            <div className="flex items-center space-x-1">
+              <Clock className="w-3 h-3 text-gray-400" />
+              <span className="text-xs text-gray-400">Processing...</span>
+            </div>
+          );
+        }
         
-        // Show "please check later" message if status is Pending or Processing
-        const isPendingOrProcessing = status === 'pending' || status === 'processing';
-        
-        // Only show missing documents if status is Failed or Completed
-        const shouldShowMissingDocs = status === 'failed' || status === 'completed';
-        
-        // Check for missing documents
-        const hasMissingDocs = donor.requiredDocuments && donor.requiredDocuments.some(doc => doc.status === 'missing');
-        
+        // Data is available - check if there are critical findings
         return (
-          <div className="space-y-1.5">
-            {isPendingOrProcessing ? (
-              <div className="flex items-start gap-1.5 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <AlertTriangle className="h-3 w-3 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div className="text-yellow-800">
-                  <p className="font-medium">Processing...</p>
-                  <p className="text-yellow-700 text-xs">Check back later</p>
-                </div>
-              </div>
-            ) : shouldShowMissingDocs && hasMissingDocs ? (
+          <div className="space-y-1">
+            {hasCriticalFindings(donor) ? (
               <>
-                <div className="flex items-center text-yellow-600 text-xs mb-1">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  Missing:
+                <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Critical Finding
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {donor.requiredDocuments!
-                    .filter(doc => doc.status === 'missing')
-                    .slice(0, 2)
-                    .map((doc, index) => (
-                      <span
-                        key={index}
-                        className={`${getDocumentStatusBadge('missing')} text-xs`}
-                      >
-                        {doc.label}
-                      </span>
-                    ))}
-                  {donor.requiredDocuments!.filter(doc => doc.status === 'missing').length > 2 && (
-                    <span className="text-xs text-gray-500">
-                      +{donor.requiredDocuments!.filter(doc => doc.status === 'missing').length - 2} more
-                    </span>
-                  )}
-                </div>
+                {donor.rejectionReason && (
+                  <div className="text-xs text-red-600 mt-1 line-clamp-2">
+                    {donor.rejectionReason}
+                  </div>
+                )}
               </>
-            ) : shouldShowMissingDocs && !hasMissingDocs ? (
-              <span className="text-xs text-green-600">All present</span>
             ) : (
-              <span className="text-xs text-gray-400">—</span>
+              <span className="text-xs text-gray-400">None</span>
             )}
           </div>
         );
@@ -392,7 +370,7 @@ export default function DonorManagement() {
     {
       key: 'status',
       title: 'Status',
-      className: 'w-32',
+      className: 'w-24',
       render: (donor: DonorWithDetails & { isLatestDonor?: boolean }) => {
         // Only show if donor has documents uploaded
         if (!donor.hasDocuments) {
@@ -418,25 +396,9 @@ export default function DonorManagement() {
       }
     },
     {
-      key: 'created',
-      title: 'Date',
-      className: 'w-28',
-      render: (donor: Donor) => {
-        const date = new Date(donor.created_at);
-        const month = date.toLocaleDateString('en-US', { month: 'short' });
-        const day = date.getDate();
-        const year = date.getFullYear();
-        return (
-          <span className="text-xs text-gray-500" title={formatDate(donor.created_at)}>
-            {month} {day}, {year}
-          </span>
-        );
-      }
-    },
-    {
       key: 'actions',
-      title: '',
-      className: 'w-24 text-right',
+      title: 'Actions',
+      className: 'w-28 text-right',
       render: (donor: Donor) => (
         <div className="flex justify-end space-x-1">
           <button
