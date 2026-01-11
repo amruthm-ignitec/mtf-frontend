@@ -28,10 +28,22 @@ export default function PlasmaDilutionSection({ data, documents = [], onCitation
     );
   }
   
+  // Helper function to check if an object has any meaningful (non-null, non-empty) values
+  const hasMeaningfulData = (obj: any): boolean => {
+    if (!obj || typeof obj !== 'object') return false;
+    return Object.values(obj).some(value => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string' && value.trim() === '') return false;
+      if (Array.isArray(value) && value.length === 0) return false;
+      if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+      return true;
+    });
+  };
+  
   // Check if there's any meaningful data to display
-  const hasSummary = summary && Object.keys(summary).length > 0;
-  const hasExtractedData = extractedData && Object.keys(extractedData).length > 0;
-  const hasPages = pages && pages.length > 0;
+  const hasSummary = hasMeaningfulData(summary);
+  const hasExtractedData = hasMeaningfulData(extractedData);
+  const hasPages = Array.isArray(pages) && pages.length > 0;
   
   // If no data is available, show empty state
   if (!hasSummary && !hasExtractedData && !hasPages) {
@@ -73,52 +85,62 @@ export default function PlasmaDilutionSection({ data, documents = [], onCitation
         )}
       </div>
 
-      {/* Summary Section */}
-      {summary && Object.keys(summary).length > 0 && (
+      {/* Summary Section - Only show if there's meaningful data */}
+      {hasSummary && (
         <Card className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <Droplets className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">Summary</h3>
           </div>
           <div className="space-y-3">
-            {Object.entries(summary).map(([key, value]) => (
-              value && (
+            {Object.entries(summary).map(([key, value]) => {
+              // Only render if value is meaningful
+              if (!value || (typeof value === 'string' && value.trim() === '') || 
+                  (Array.isArray(value) && value.length === 0)) {
+                return null;
+              }
+              return (
                 <div key={key}>
                   <label className="text-sm font-medium text-gray-500">{key}</label>
                   <p className="text-sm text-gray-900 mt-1">
                     {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                   </p>
                 </div>
-              )
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
 
-      {/* Extracted Data Section */}
-      {extractedData && Object.keys(extractedData).length > 0 && (
+      {/* Extracted Data Section - Only show if there's meaningful data */}
+      {hasExtractedData && (
         <Card className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <Calculator className="w-5 h-5 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900">Extracted Data</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(extractedData).map(([key, value]) => (
-              value && (
+            {Object.entries(extractedData).map(([key, value]) => {
+              // Only render if value is meaningful
+              if (!value || value === null || (typeof value === 'string' && value.trim() === '') ||
+                  (Array.isArray(value) && value.length === 0)) {
+                return null;
+              }
+              return (
                 <div key={key} className="bg-gray-50 p-4 rounded-lg">
                   <label className="text-xs font-medium text-gray-500">{key.replace(/_/g, ' ')}</label>
                   <p className="text-sm font-semibold text-gray-900 mt-1">
                     {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                   </p>
                 </div>
-              )
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
 
       {/* Source Pages */}
-      {pages && pages.length > 0 && (
+      {hasPages && (
         <Card className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <FileText className="w-5 h-5 text-gray-600" />

@@ -87,7 +87,7 @@ export default function Header() {
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
-                User Feedback
+                Platform Feedback
               </Link>
             </nav>
             <div className="flex items-center">

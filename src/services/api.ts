@@ -184,6 +184,31 @@ class ApiService {
     return this.request<ExtractionDataResponse>(`/donors/${donorId}/extraction-data`);
   }
 
+  async getDonorEligibility(donorId: number): Promise<{
+    donor_id: string;
+    eligibility: {
+      musculoskeletal?: {
+        status: string;
+        blocking_criteria: any[];
+        md_discretion_criteria: any[];
+        evaluated_at?: string;
+      };
+      skin?: {
+        status: string;
+        blocking_criteria: any[];
+        md_discretion_criteria: any[];
+        evaluated_at?: string;
+      };
+    };
+    criteria_evaluations: Record<string, any>;
+  }> {
+    return this.request(`/donors/${donorId}/eligibility`);
+  }
+
+  async getQueueDetails(): Promise<any[]> {
+    return this.request<any[]>('/donors/queue/details');
+  }
+
   // User management methods (Admin only)
   async getUsers(): Promise<User[]> {
     return this.request<User[]>('/users');
@@ -245,13 +270,25 @@ class ApiService {
     return this.request<DonorApprovalResponse>(`/donor-approvals/${approvalId}`);
   }
 
-  // User Feedback methods
+  // Platform Feedback methods
   async getFeedbacks(): Promise<Array<{ id: number; username: string; feedback: string; created_at: string }>> {
     return this.request<Array<{ id: number; username: string; feedback: string; created_at: string }>>('/feedback');
   }
 
   async createFeedback(text: string): Promise<{ id: number; username: string; feedback: string; created_at: string }> {
     return this.request<{ id: number; username: string; feedback: string; created_at: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  // Donor Feedback methods
+  async getDonorFeedbacks(donorId: number): Promise<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>> {
+    return this.request<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>>(`/donors/${donorId}/feedback`);
+  }
+
+  async createDonorFeedback(donorId: number, text: string): Promise<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }> {
+    return this.request<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>(`/donors/${donorId}/feedback`, {
       method: 'POST',
       body: JSON.stringify({ text }),
     });

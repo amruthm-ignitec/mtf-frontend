@@ -334,8 +334,24 @@ export interface ChecklistStatus {
   overall_status: string;
 }
 
+export interface CriticalFinding {
+  type: string;
+  severity: string;
+  automaticRejection: boolean;
+  reasoning?: string;
+  detectedAt?: string;
+  source?: {
+    documentId: string;
+    pageNumber: string;
+    confidence: number;
+  };
+}
+
 export interface ValidationStatus {
-  checklist_status: ChecklistStatus;
+  checklist_status?: ChecklistStatus;
+  critical_findings?: CriticalFinding[];
+  has_critical_findings?: boolean;
+  automatic_rejection?: boolean;
 }
 
 // Compliance Status
@@ -384,6 +400,34 @@ export interface RecoveryInformation {
   consent_status?: string | null;
 }
 
+// Criteria Evaluation
+export interface CriteriaEvaluation {
+  extracted_data?: Record<string, any>;
+  evaluation_result: 'acceptable' | 'unacceptable' | 'md_discretion';
+  evaluation_reasoning?: string;
+  tissue_types?: string[];
+  document_ids?: number[]; // Document IDs where this criterion data was extracted from
+}
+
+// Eligibility Status
+export interface EligibilityStatus {
+  status: 'eligible' | 'ineligible' | 'requires_review' | 'pending';
+  blocking_criteria?: Array<{
+    criterion_name: string;
+    reasoning?: string;
+  }>;
+  md_discretion_criteria?: Array<{
+    criterion_name: string;
+    reasoning?: string;
+  }>;
+  evaluated_at?: string;
+}
+
+export interface EligibilityData {
+  musculoskeletal?: EligibilityStatus;
+  skin?: EligibilityStatus;
+}
+
 // Complete Extraction Response
 export interface ExtractionDataResponse {
   donor_id: string;
@@ -397,6 +441,30 @@ export interface ExtractionDataResponse {
   document_summary?: DocumentSummary;
   terminal_information?: TerminalInformation;
   recovery_information?: RecoveryInformation;
+  
+  // New fields from criteria-focused backend
+  serology_results?: {
+    result: Record<string, string>;
+    citations: Citation[];
+  };
+  culture_results?: {
+    result: Array<{
+      test_name: string;
+      result: string;
+      test_method?: string;
+      specimen_type?: string;
+      specimen_date?: string;
+      comments?: string;
+      tissue_location?: string;
+      microorganism?: string;
+      document_id?: number;
+    }>;
+    citations: Citation[];
+  };
+  criteria_evaluations?: Record<string, CriteriaEvaluation>;
+  eligibility?: EligibilityData;
+  
+  // Legacy fields (deprecated, kept for backward compatibility)
   tissue_eligibility?: any[];
   critical_lab_values?: any;
   key_medical_findings?: any;

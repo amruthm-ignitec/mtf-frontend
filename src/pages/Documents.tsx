@@ -22,6 +22,7 @@ import { Donor } from '../types/donor';
 import { ExtractionDataResponse } from '../types/extraction';
 import DocumentStatusSlider, { DocumentStatus } from '../components/ui/DocumentStatusSlider';
 import DocumentChecklist from '../components/donor/DocumentChecklist';
+import DonorFeedback from '../components/donor/DonorFeedback';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -451,6 +452,13 @@ export default function Documents() {
                 errorMessage={doc.error_message}
               />
             ))}
+        </div>
+      )}
+
+      {/* Donor Feedback Section */}
+      {donorId && (
+        <div className="mt-8">
+          <DonorFeedback donorId={Number(donorId)} />
         </div>
       )}
     </div>

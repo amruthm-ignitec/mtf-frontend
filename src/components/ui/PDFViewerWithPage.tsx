@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { ZoomIn, ZoomOut, ExternalLink, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { apiService } from '../../services/api';
 
 // Set up PDF.js worker - must match react-pdf's internal pdfjs-dist version (5.4.296)
 // react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally, so we must use the same version
@@ -18,6 +19,7 @@ interface PDFViewerWithPageProps {
   pageNumber?: number;
   onClose: () => void;
   documentName?: string;
+  documentId?: number;
 }
 
 export default function PDFViewerWithPage({
@@ -25,6 +27,7 @@ export default function PDFViewerWithPage({
   pageNumber = 1,
   onClose,
   documentName,
+  documentId,
 }: PDFViewerWithPageProps) {
   // Ensure worker is set before component renders - critical for PDF.js initialization
   useEffect(() => {
@@ -57,7 +60,6 @@ export default function PDFViewerWithPage({
         // - Local files can be used directly
         const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
         const isAzureBlobUrl = pdfUrl.includes('blob.core.windows.net');
-        const isLocalFile = pdfUrl.startsWith('/') && !isApiUrl && !isAzureBlobUrl;
         
         if (isApiUrl || isAzureBlobUrl) {
           // Fetch PDF with authentication headers for API endpoints
@@ -194,17 +196,32 @@ export default function PDFViewerWithPage({
     }
   };
 
-  // Open in new tab
-  const handleOpenInNewTab = () => {
-    // Create a blob URL from the PDF data if it's an ArrayBuffer
-    if (pdfData instanceof ArrayBuffer) {
-      const blob = new Blob([pdfData], { type: 'application/pdf' });
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-      // Clean up the blob URL after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+  const handleOpenInNewTab = async () => {
+    const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
+    
+    if (isApiUrl && documentId) {
+      try {
+        const sasData = await apiService.getDocumentSasUrl(documentId, 60);
+        window.open(sasData.sas_url, '_blank');
+      } catch (error) {
+        console.error('Error fetching SAS URL:', error);
+        window.open(pdfUrl, '_blank');
+      }
+    } else if (isApiUrl && !documentId) {
+      const match = pdfUrl.match(/\/documents\/(\d+)\/pdf/);
+      if (match) {
+        const docId = parseInt(match[1]);
+        try {
+          const sasData = await apiService.getDocumentSasUrl(docId, 60);
+          window.open(sasData.sas_url, '_blank');
+        } catch (error) {
+          console.error('Error fetching SAS URL:', error);
+          window.open(pdfUrl, '_blank');
+        }
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
     } else {
-      // For URLs, open directly
       window.open(pdfUrl, '_blank');
     }
   };

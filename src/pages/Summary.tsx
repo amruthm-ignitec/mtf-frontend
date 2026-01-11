@@ -8,16 +8,15 @@ import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, L
 import FindingDetailsModal from '../components/modals/FindingDetailsModal';
 import ApprovalRejectionModal from '../components/modals/ApprovalRejectionModal';
 import { apiService } from '../services/api';
-import PhysicalAssessmentSection from '../components/donor/PhysicalAssessmentSection';
-import AuthorizationSection from '../components/donor/AuthorizationSection';
 import DRAISection from '../components/donor/DRAISection';
 import InfectiousDiseaseSection from '../components/donor/InfectiousDiseaseSection';
-import TissueRecoverySection from '../components/donor/TissueRecoverySection';
 import ComplianceSection from '../components/donor/ComplianceSection';
 import ConditionalDocumentsSection from '../components/donor/ConditionalDocumentsSection';
 import MedicalRecordsReviewSection from '../components/donor/MedicalRecordsReviewSection';
 import PlasmaDilutionSection from '../components/donor/PlasmaDilutionSection';
 import PastDataSection from '../components/donor/PastDataSection';
+import EligibilityStatusSection from '../components/donor/EligibilityStatusSection';
+import CriteriaEvaluationsSection from '../components/donor/CriteriaEvaluationsSection';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import PDFViewer from '../components/ui/PDFViewer';
@@ -64,11 +63,10 @@ const FindingsSection = () => (
 const SUMMARY_TABS = [
   { id: 'overview', label: 'Overview', icon: Layout },
   { id: 'clinical', label: 'Clinical Information', icon: Heart },
-  { id: 'physical-assessment', label: 'Physical Assessment', icon: UserCheck },
-  { id: 'authorization', label: 'Authorization', icon: FileCheck },
+  { id: 'eligibility', label: 'Eligibility Status', icon: Shield },
+  { id: 'criteria', label: 'Criteria Evaluations', icon: FileCheck },
   { id: 'drai', label: 'DRAI', icon: User },
   { id: 'infectious-disease', label: 'Infectious Disease', icon: FlaskConical },
-  { id: 'tissue-recovery', label: 'Tissue Recovery', icon: Package },
   { id: 'conditional-docs', label: 'Conditional Tests', icon: FileSearch },
   { id: 'plasma-dilution', label: 'Plasma Dilution', icon: Droplets }
 ] as const;
@@ -143,6 +141,7 @@ export default function Summary() {
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [selectedPageNumber, setSelectedPageNumber] = useState<number | null>(null);
   const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
 
   // useEffect(() => {
   //   console.log('Current ID:', id);
@@ -530,6 +529,24 @@ export default function Summary() {
               // Check if document is present using extraction data
               const isDocumentPresent = (extractionKey: string): boolean => {
                 if (!extractionData?.extracted_data) return false;
+                
+                // Special handling for infectious_disease_testing: check for actual test results
+                if (extractionKey === 'infectious_disease_testing') {
+                  // Check if document presence flag is true
+                  const section = extractionData.extracted_data[extractionKey];
+                  if (section?.present === true) return true;
+                  
+                  // Also check if we have actual test results (serology or culture)
+                  const hasSerology = extractionData?.serology_results?.result && 
+                    Object.keys(extractionData.serology_results.result).length > 0;
+                  const hasCulture = Array.isArray(extractionData?.culture_results?.result) && 
+                    extractionData.culture_results.result.length > 0;
+                  
+                  // If we have test results, consider it present
+                  return hasSerology || hasCulture;
+                }
+                
+                // For other document types, check the present flag
                 const section = extractionData.extracted_data[extractionKey];
                 return section?.present === true;
               };
@@ -668,59 +685,286 @@ export default function Summary() {
             })()}
 
             {/* Key Medical Findings */}
-            {extractionData?.key_medical_findings && (
+            {(() => {
+              // Extract key information from criteria_evaluations
+              const getExtractedMedicalInfo = () => {
+                if (!extractionData?.criteria_evaluations) return null;
+                
+                const criteria = extractionData.criteria_evaluations;
+                const info: {
+                  age?: number;
+                  gender?: string;
+                  causeOfDeath?: string;
+                  medicalHistory?: string[];
+                  biopsyFindings?: string[];
+                } = {};
+                
+                // Extract Age and Gender from "Age" criterion
+                if (criteria['Age']?.extracted_data) {
+                  const ageData = criteria['Age'].extracted_data;
+                  if (ageData.donor_age) info.age = ageData.donor_age;
+                  if (ageData.gender) info.gender = ageData.gender;
+                }
+                
+                // Extract Cause of Death from various criteria
+                const causeOfDeathCriteria = ['High Risk Non-IV Related Drug Use', 'High Risk Behavior', 'Cause of Death'];
+                for (const criterionName of causeOfDeathCriteria) {
+                  if (criteria[criterionName]?.extracted_data?.cause_of_death) {
+                    info.causeOfDeath = criteria[criterionName].extracted_data.cause_of_death;
+                    break;
+                  }
+                }
+                
+                // Extract Medical History from various criteria
+                const medicalHistoryItems: string[] = [];
+                
+                // From Dementia criterion
+                if (criteria['Dementia']?.extracted_data) {
+                  const dementiaData = criteria['Dementia'].extracted_data;
+                  if (dementiaData.dementia_diagnosis) {
+                    medicalHistoryItems.push(`Dementia: ${dementiaData.dementia_diagnosis}`);
+                  }
+                  if (dementiaData.dementia_etiology) {
+                    medicalHistoryItems.push(`Dementia Etiology: ${dementiaData.dementia_etiology}`);
+                  }
+                }
+                
+                // From Long Term Illness criterion
+                if (criteria['Long Term Illness']?.extracted_data) {
+                  const ltiData = criteria['Long Term Illness'].extracted_data;
+                  if (ltiData.long_term_illness) {
+                    medicalHistoryItems.push(`Long Term Illness: ${ltiData.long_term_illness}`);
+                  }
+                  if (ltiData.disease_history) {
+                    medicalHistoryItems.push(`Disease History: ${ltiData.disease_history}`);
+                  }
+                }
+                
+                // From Cancer criterion (biopsy findings)
+                if (criteria['Cancer']?.extracted_data) {
+                  const cancerData = criteria['Cancer'].extracted_data;
+                  if (cancerData.cancer_type) {
+                    medicalHistoryItems.push(`Cancer: ${cancerData.cancer_type}`);
+                  }
+                }
+                
+                // From Infection criterion
+                if (criteria['Infection']?.extracted_data) {
+                  const infectionData = criteria['Infection'].extracted_data;
+                  if (infectionData.active_infection) {
+                    medicalHistoryItems.push(`Active Infection: ${infectionData.active_infection}`);
+                  }
+                  if (infectionData.infection_type) {
+                    medicalHistoryItems.push(`Infection Type: ${infectionData.infection_type}`);
+                  }
+                }
+                
+                // From Sepsis criterion
+                if (criteria['Sepsis']?.extracted_data) {
+                  const sepsisData = criteria['Sepsis'].extracted_data;
+                  if (sepsisData.sepsis_diagnosis) {
+                    medicalHistoryItems.push(`Sepsis: ${sepsisData.sepsis_diagnosis}`);
+                  }
+                  if (sepsisData.sepsis_symptoms) {
+                    medicalHistoryItems.push(`Sepsis Symptoms: ${sepsisData.sepsis_symptoms}`);
+                  }
+                }
+                
+                // From Diabetes criterion
+                if (criteria['Diabetes']?.extracted_data) {
+                  const diabetesData = criteria['Diabetes'].extracted_data;
+                  if (diabetesData.diabetes_amputation) {
+                    medicalHistoryItems.push(`Diabetes Amputation: ${diabetesData.diabetes_amputation}`);
+                  }
+                }
+                
+                if (medicalHistoryItems.length > 0) {
+                  info.medicalHistory = medicalHistoryItems;
+                }
+                
+                // Extract biopsy findings from Cancer criterion
+                if (criteria['Cancer']?.extracted_data) {
+                  const cancerData = criteria['Cancer'].extracted_data;
+                  const biopsyFindings: string[] = [];
+                  
+                  // Look for biopsy-related findings
+                  if (cancerData.cancer_type && cancerData.cancer_type.toLowerCase().includes('negative')) {
+                    biopsyFindings.push(cancerData.cancer_type);
+                  }
+                  
+                  if (biopsyFindings.length > 0) {
+                    info.biopsyFindings = biopsyFindings;
+                  }
+                }
+                
+                return Object.keys(info).length > 0 ? info : null;
+              };
+              
+              const extractedInfo = getExtractedMedicalInfo();
+              const hasKeyFindings = extractionData?.key_medical_findings && Object.keys(extractionData.key_medical_findings).length > 0;
+              const hasExtractedInfo = extractedInfo !== null;
+              
+              if (!hasKeyFindings && !hasExtractedInfo) {
+                return null;
+              }
+              
+              return (
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h3 className="text-md font-semibold mb-3 flex items-center">
+                    <Stethoscope className="h-4 w-4 mr-2 text-gray-700" />
+                    Key Medical Findings
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Extracted Demographics */}
+                    {extractedInfo && (extractedInfo.age || extractedInfo.gender) && (
+                      <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Demographics</h4>
+                        <div className="space-y-1 text-xs text-gray-700">
+                          {extractedInfo.age && (
+                            <p><span className="font-medium">Age:</span> {extractedInfo.age} years</p>
+                          )}
+                          {extractedInfo.gender && (
+                            <p><span className="font-medium">Gender:</span> {extractedInfo.gender}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Extracted Cause of Death */}
+                    {extractedInfo?.causeOfDeath && (
+                      <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Cause of Death</h4>
+                        <p className="text-xs text-gray-700">{extractedInfo.causeOfDeath}</p>
+                      </div>
+                    )}
+                    
+                    {/* Extracted Medical History */}
+                    {extractedInfo?.medicalHistory && extractedInfo.medicalHistory.length > 0 && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
+                        <ul className="space-y-1 text-xs text-gray-700">
+                          {extractedInfo.medicalHistory.map((item, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="mr-1">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Extracted Biopsy Findings */}
+                    {extractedInfo?.biopsyFindings && extractedInfo.biopsyFindings.length > 0 && (
+                      <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Biopsy Findings</h4>
+                        <ul className="space-y-1 text-xs text-gray-700">
+                          {extractedInfo.biopsyFindings.map((finding, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="mr-1">•</span>
+                              <span>{finding}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Legacy Key Medical Findings */}
+                    {extractionData.key_medical_findings?.tissue_quality && (
+                      <div className={`p-3 rounded-lg border ${
+                        extractionData.key_medical_findings.tissue_quality?.status === 'Good' 
+                          ? 'bg-green-50 border-green-100' 
+                          : extractionData.key_medical_findings.tissue_quality?.status === 'Review Required'
+                          ? 'bg-yellow-50 border-yellow-100'
+                          : 'bg-gray-50 border-gray-100'
+                      }`}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.tissue_quality?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                    {extractionData.key_medical_findings?.bone_density && (
+                      <div className={`p-3 rounded-lg border ${
+                        extractionData.key_medical_findings.bone_density?.status === 'Available' 
+                          ? 'bg-green-50 border-green-100' 
+                          : 'bg-gray-50 border-gray-100'
+                      }`}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.bone_density?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                    {extractionData.key_medical_findings?.cardiovascular_health && (
+                      <div className={`p-3 rounded-lg border ${
+                        extractionData.key_medical_findings.cardiovascular_health?.status === 'No significant findings' 
+                          ? 'bg-green-50 border-green-100' 
+                          : 'bg-blue-50 border-blue-100'
+                      }`}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.cardiovascular_health?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                    {extractionData.key_medical_findings?.medical_history && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History (Legacy)</h4>
+                        <p className="text-xs text-gray-700">
+                          {extractionData.key_medical_findings.medical_history?.description || '-'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Eligibility Status Summary */}
+            {extractionData?.eligibility && (
+              <EligibilityStatusSection eligibility={extractionData.eligibility} />
+            )}
+
+            {/* Criteria Evaluations Summary */}
+            {extractionData?.criteria_evaluations && Object.keys(extractionData.criteria_evaluations).length > 0 && (
               <div className="bg-white rounded-lg shadow p-4">
                 <h3 className="text-md font-semibold mb-3 flex items-center">
-                  <Stethoscope className="h-4 w-4 mr-2 text-gray-700" />
-                  Key Medical Findings
+                  <FileCheck className="h-4 w-4 mr-2 text-gray-700" />
+                  Criteria Evaluations Summary
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {extractionData.key_medical_findings?.tissue_quality && (
-                    <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.tissue_quality?.status === 'Good' 
-                        ? 'bg-green-50 border-green-100' 
-                        : extractionData.key_medical_findings.tissue_quality?.status === 'Review Required'
-                        ? 'bg-yellow-50 border-yellow-100'
-                        : 'bg-gray-50 border-gray-100'
-                    }`}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Tissue Quality</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.tissue_quality?.description || '-'}
-                      </p>
-                    </div>
-                  )}
-                  {extractionData.key_medical_findings?.bone_density && (
-                    <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.bone_density?.status === 'Available' 
-                        ? 'bg-green-50 border-green-100' 
-                        : 'bg-gray-50 border-gray-100'
-                    }`}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Bone Density</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.bone_density?.description || '-'}
-                      </p>
-                    </div>
-                  )}
-                  {extractionData.key_medical_findings?.cardiovascular_health && (
-                    <div className={`p-3 rounded-lg border ${
-                      extractionData.key_medical_findings.cardiovascular_health?.status === 'No significant findings' 
-                        ? 'bg-green-50 border-green-100' 
-                        : 'bg-blue-50 border-blue-100'
-                    }`}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Cardiovascular Health</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.cardiovascular_health?.description || '-'}
-                      </p>
-                    </div>
-                  )}
-                  {extractionData.key_medical_findings?.medical_history && (
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Medical History</h4>
-                      <p className="text-xs text-gray-700">
-                        {extractionData.key_medical_findings.medical_history?.description || '-'}
-                      </p>
-                    </div>
-                  )}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {Object.keys(extractionData.criteria_evaluations).length}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Total Criteria</p>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded border border-green-200">
+                    <p className="text-2xl font-bold text-green-700">
+                      {Object.values(extractionData.criteria_evaluations).filter((e: any) => e.evaluation_result === 'acceptable').length}
+                    </p>
+                    <p className="text-xs text-green-700 mt-1">Acceptable</p>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded border border-red-200">
+                    <p className="text-2xl font-bold text-red-700">
+                      {Object.values(extractionData.criteria_evaluations).filter((e: any) => e.evaluation_result === 'unacceptable').length}
+                    </p>
+                    <p className="text-xs text-red-700 mt-1">Unacceptable</p>
+                  </div>
+                  <div className="text-center p-3 bg-yellow-50 rounded border border-yellow-200">
+                    <p className="text-2xl font-bold text-yellow-700">
+                      {Object.values(extractionData.criteria_evaluations).filter((e: any) => e.evaluation_result === 'md_discretion').length}
+                    </p>
+                    <p className="text-xs text-yellow-700 mt-1">MD Discretion</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <button
+                    onClick={() => handleTabChange('criteria')}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                  >
+                    View all criteria evaluations →
+                  </button>
                 </div>
               </div>
             )}
@@ -738,6 +982,9 @@ export default function Summary() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-red-900">{finding.type}</p>
+                          {finding.reasoning && (
+                            <p className="text-xs text-red-700 mt-1">{finding.reasoning}</p>
+                          )}
                           <p className="text-xs text-red-700 mt-1">Severity: {finding.severity}</p>
                           {finding.automaticRejection && (
                             <p className="text-xs text-red-800 font-medium mt-1">Automatic Rejection</p>
@@ -748,6 +995,48 @@ export default function Summary() {
                   ))}
                   </div>
                     </div>
+            )}
+
+            {/* Document Summary */}
+            {extractionData?.document_summary && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-md font-semibold mb-3 flex items-center">
+                  <FileText className="h-4 w-4 mr-2 text-gray-700" />
+                  Document Processing Summary
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {extractionData.document_summary.total_documents_processed}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Documents Processed</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {extractionData.document_summary.total_pages_processed}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Pages Processed</p>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-lg font-bold text-blue-700">
+                      {extractionData.serology_results?.result ? Object.keys(extractionData.serology_results.result).length : 0}
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">Serology Tests</p>
+                  </div>
+                </div>
+                {extractionData.document_summary.extraction_methods_used && extractionData.document_summary.extraction_methods_used.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-gray-500 mb-2">Extraction Methods:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {extractionData.document_summary.extraction_methods_used.map((method, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+                          {method}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Missing Documents */}
@@ -778,19 +1067,13 @@ export default function Summary() {
       case 'clinical':
         // Check if any clinical data is available
         const clinicalHasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
-        const clinicalHasSerologyFallback = extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type;
-        const clinicalHasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
-        const clinicalHasMedicalHistory = extractionData?.extracted_data?.medical_records_review_summary;
-        const clinicalHasDRAI = extractionData?.extracted_data?.donor_risk_assessment_interview;
+        const clinicalHasCulture = Array.isArray(extractionData?.culture_results?.result) && extractionData.culture_results.result.length > 0;
         const clinicalHasTerminalInfo = extractionData?.terminal_information;
         
         // If no clinical data is available, show empty state
         if (
           !clinicalHasSerology &&
-          !clinicalHasSerologyFallback &&
           !clinicalHasCulture &&
-          !clinicalHasMedicalHistory &&
-          !clinicalHasDRAI &&
           !clinicalHasTerminalInfo
         ) {
           return (
@@ -870,72 +1153,15 @@ export default function Summary() {
                           </a>
                         </div>
                       </>
-                    ) : extractionData?.extracted_data?.infectious_disease_testing?.serology_report?.report_type ? (
-                      // Fallback to old structure if available
-                      <>
-                        <div>
-                          <div className="mb-2">
-                            <p className="text-xs text-gray-600">
-                              Report Type: {extractionData.extracted_data.infectious_disease_testing.serology_report.report_type}
-                            </p>
-                          </div>
-                          {extractionData.extracted_data.infectious_disease_testing.other_tests && (
-                            <div className="grid grid-cols-2 gap-3">
-                              {Object.entries(extractionData.extracted_data.infectious_disease_testing.other_tests)
-                                .filter(([key, value]) => 
-                                  value && 
-                                  typeof value === 'object' &&
-                                  'result' in value && 
-                                  value.result && 
-                                  (key.includes('sample') || key.includes('report') || key.includes('laboratory'))
-                                )
-                                .slice(0, 6)
-                                .map(([key, value]: [string, any]) => {
-                                  const resultStr = value?.result ? String(value.result).toLowerCase().trim() : '';
-                                  // First check for negative patterns - if found, it's NOT positive
-                                  const negativePatterns = ['non-reactive', 'non reactive', 'nonreactive', 'negative', 'neg'];
-                                  const isNegative = negativePatterns.some(pattern => resultStr.includes(pattern));
-                                  
-                                  // Only check for positive if it's not negative
-                                  const isPositive = !isNegative && (resultStr.includes('positive') || resultStr.includes('reactive'));
-                                  return (
-                                    <div key={key} className="bg-gray-50 p-2 rounded">
-                                      <div className="text-xs text-gray-500 mb-1.5">{value?.test_name || key || '-'}</div>
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                        isPositive 
-                                          ? 'bg-red-100 text-red-700 border border-red-200' 
-                                          : 'bg-green-100 text-green-700 border border-green-200'
-                                      }`}>
-                                        {value?.result || '-'}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2">
-                          <a
-                            href="#infectious-disease"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleTabChange('infectious-disease');
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            View detailed test results →
-                          </a>
-                        </div>
-                      </>
                     ) : (
-                      <p className="text-xs text-gray-500 italic">Serology report not performed</p>
+                      <p className="text-xs text-gray-500">No serology results available</p>
                     )}
                   </div>
 
                   {/* Culture Results */}
                   <div>
                     <h4 className="text-xs font-medium text-gray-500 mb-2">Culture Results</h4>
-                    {extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0 ? (
+                    {Array.isArray(extractionData?.culture_results?.result) && extractionData.culture_results.result.length > 0 ? (
                       <>
                         <div className="grid grid-cols-2 gap-3">
                           {extractionData.culture_results.result.slice(0, 2).map((culture: any, idx: number) => {
@@ -1042,6 +1268,15 @@ export default function Summary() {
                                       {parsedCulture.preliminary_result}
                                     </div>
                                   )}
+                                  {parsedCulture?.comments && (
+                                    <div className={`text-xs mt-2 pt-2 border-t ${
+                                      hasGrowth 
+                                        ? 'text-red-700 border-red-100 font-medium' 
+                                        : 'text-gray-500 border-gray-100'
+                                    }`}>
+                                      {parsedCulture.comments}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             } else {
@@ -1085,45 +1320,36 @@ export default function Summary() {
                     Medical History
                   </h3>
                   <div className="space-y-3">
-                    {extractionData.extracted_data.medical_records_review_summary.summary && (
+                    {extractionData.extracted_data.medical_records_review_summary && (
                       <>
-                        {extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses && (
+                        {/* Use extracted_data for arrays, summary for strings */}
+                        {extractionData.extracted_data.medical_records_review_summary.extracted_data?.Diagnoses && 
+                         Array.isArray(extractionData.extracted_data.medical_records_review_summary.extracted_data.Diagnoses) &&
+                         extractionData.extracted_data.medical_records_review_summary.extracted_data.Diagnoses.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-gray-500 mb-2">Diagnoses</h4>
                             <ul className="space-y-1.5">
-                              {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses) ? (
-                                extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses.slice(0, 5).map((diag: string, idx: number) => (
-                                  <li key={idx} className="flex items-start text-sm">
-                                    <span className="text-gray-500 mr-2">•</span>
-                                    <span>{diag || '-'}</span>
-                                  </li>
-                                ))
-                              ) : (
-                                <li className="flex items-start text-sm">
+                              {extractionData.extracted_data.medical_records_review_summary.extracted_data.Diagnoses.slice(0, 5).map((diag: string, idx: number) => (
+                                <li key={idx} className="flex items-start text-sm">
                                   <span className="text-gray-500 mr-2">•</span>
-                                  <span>{extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses ? String(extractionData.extracted_data.medical_records_review_summary.summary.Diagnoses) : '-'}</span>
+                                  <span>{diag || '-'}</span>
                                 </li>
-                              )}
+                              ))}
                             </ul>
                           </div>
                         )}
-                        {extractionData.extracted_data.medical_records_review_summary.summary.Procedures && (
+                        {extractionData.extracted_data.medical_records_review_summary.extracted_data?.Procedures && 
+                         Array.isArray(extractionData.extracted_data.medical_records_review_summary.extracted_data.Procedures) &&
+                         extractionData.extracted_data.medical_records_review_summary.extracted_data.Procedures.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-gray-500 mb-2">Procedures</h4>
                             <ul className="space-y-1.5">
-                              {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Procedures) ? (
-                                extractionData.extracted_data.medical_records_review_summary.summary.Procedures.slice(0, 3).map((proc: string, idx: number) => (
-                                  <li key={idx} className="flex items-start text-sm">
-                                    <span className="text-gray-500 mr-2">•</span>
-                                    <span>{proc || '-'}</span>
-                                  </li>
-                                ))
-                              ) : (
-                                <li className="flex items-start text-sm">
+                              {extractionData.extracted_data.medical_records_review_summary.extracted_data.Procedures.slice(0, 3).map((proc: string, idx: number) => (
+                                <li key={idx} className="flex items-start text-sm">
                                   <span className="text-gray-500 mr-2">•</span>
-                                  <span>{extractionData.extracted_data.medical_records_review_summary.summary.Procedures ? String(extractionData.extracted_data.medical_records_review_summary.summary.Procedures) : '-'}</span>
+                                  <span>{proc || '-'}</span>
                                 </li>
-                              )}
+                              ))}
                             </ul>
                           </div>
                         )}
@@ -1148,26 +1374,70 @@ export default function Summary() {
                       <div className="bg-yellow-50 p-3 rounded">
                         <h4 className="text-xs font-medium text-yellow-800 mb-2">Risk Factors</h4>
                         <ul className="space-y-1 text-sm text-yellow-700">
-                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).map(([key, value]) => (
+                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).slice(0, 5).map(([key, value]) => (
                             <li key={key} className="flex items-start">
                               <CheckCircle className="w-4 h-4 mr-1.5 text-green-500 mt-0.5" />
                               <span>{key || '-'}: {value ? String(value) : '-'}</span>
                             </li>
                           ))}
                         </ul>
+                        {Object.keys(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Risk_Factors || {}).length > 5 && (
+                          <div className="mt-2">
+                            <a
+                              href="#drai"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleTabChange('drai');
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                            >
+                              View Full DRAI <ChevronRight className="w-3 h-3 ml-1" />
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                     {extractionData.extracted_data.donor_risk_assessment_interview.extracted_data?.Social_History && (
                       <div className="bg-blue-50 p-3 rounded">
                         <h4 className="text-xs font-medium text-blue-800 mb-2">Social History</h4>
                         <ul className="space-y-1 text-sm text-blue-700">
-                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).map(([key, value]) => (
+                          {Object.entries(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).slice(0, 5).map(([key, value]) => (
                             <li key={key} className="flex items-start">
                               <CheckCircle className="w-4 h-4 mr-1.5 text-green-500 mt-0.5" />
                               <span>{key || '-'}: {value ? String(value) : '-'}</span>
                             </li>
                           ))}
                         </ul>
+                        {Object.keys(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data.Social_History || {}).length > 5 && (
+                          <div className="mt-2">
+                            <a
+                              href="#drai"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleTabChange('drai');
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                            >
+                              View Full DRAI <ChevronRight className="w-3 h-3 ml-1" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Show "View Full DRAI" link if there are other sections (Medical_History, Additional_Information) not shown above */}
+                    {(Object.keys(extractionData.extracted_data.donor_risk_assessment_interview.extracted_data?.Medical_History || {}).length > 0 ||
+                      extractionData.extracted_data.donor_risk_assessment_interview.extracted_data?.Additional_Information) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <a
+                          href="#drai"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleTabChange('drai');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                        >
+                          View Full DRAI <ChevronRight className="w-3 h-3 ml-1" />
+                        </a>
                       </div>
                     )}
                   </div>
@@ -1228,19 +1498,17 @@ export default function Summary() {
                         </div>
                       </div>
                     </div>
-                    {extractionData.extracted_data?.medical_records_review_summary?.summary?.Medications && (
+                    {extractionData.extracted_data?.medical_records_review_summary?.extracted_data?.Medications && 
+                     Array.isArray(extractionData.extracted_data.medical_records_review_summary.extracted_data.Medications) &&
+                     extractionData.extracted_data.medical_records_review_summary.extracted_data.Medications.length > 0 && (
                       <div>
                         <h4 className="text-xs font-medium text-gray-500 mb-2">Medications</h4>
                         <div className="bg-gray-50 p-2 rounded">
-                          {Array.isArray(extractionData.extracted_data.medical_records_review_summary.summary.Medications) ? (
-                            <ul className="space-y-1">
-                              {extractionData.extracted_data.medical_records_review_summary.summary.Medications.slice(0, 3).map((med: string, idx: number) => (
-                                <li key={idx} className="text-xs text-gray-700">• {med || '-'}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-xs text-gray-700">{extractionData.extracted_data.medical_records_review_summary.summary.Medications ? String(extractionData.extracted_data.medical_records_review_summary.summary.Medications) : '-'}</p>
-                          )}
+                          <ul className="space-y-1">
+                            {extractionData.extracted_data.medical_records_review_summary.extracted_data.Medications.slice(0, 3).map((med: string, idx: number) => (
+                              <li key={idx} className="text-xs text-gray-700">• {med || '-'}</li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     )}
@@ -1251,29 +1519,6 @@ export default function Summary() {
           </div>
         );
 
-
-      case 'physical-assessment':
-        // Show partial data if available
-        if (!extractionData?.extracted_data?.physical_assessment) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Physical assessment data not available.</p>
-            </div>
-          );
-        }
-        return <PhysicalAssessmentSection data={extractionData.extracted_data.physical_assessment} documents={documents} onCitationClick={handleCitationClick} />;
-
-      case 'authorization':
-        // Check for authorization_for_tissue_donation key
-        const authorizationData = extractionData?.extracted_data?.authorization_for_tissue_donation || extractionData?.extracted_data?.authorization;
-        if (!authorizationData) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Authorization data not available.</p>
-            </div>
-          );
-        }
-        return <AuthorizationSection data={authorizationData} documents={documents} onCitationClick={handleCitationClick} />;
 
       case 'drai':
         // Try both keys - backend uses donor_risk_assessment_interview, types use drai
@@ -1294,7 +1539,7 @@ export default function Summary() {
         // Show infectious disease tab if we have any related data
         const infectiousDiseaseData = extractionData?.extracted_data?.infectious_disease_testing;
         const hasSerology = extractionData?.serology_results?.result && Object.keys(extractionData.serology_results.result).length > 0;
-        const hasCulture = extractionData?.culture_results?.result && extractionData.culture_results.result.length > 0;
+        const hasCulture = Array.isArray(extractionData?.culture_results?.result) && extractionData.culture_results.result.length > 0;
         const hasCriticalLabs = extractionData?.critical_lab_values && Object.values(extractionData.critical_lab_values).some(v => v !== null);
         
         if (!infectiousDiseaseData && !hasSerology && !hasCulture && !hasCriticalLabs) {
@@ -1315,28 +1560,6 @@ export default function Summary() {
             onCitationClick={handleCitationClick}
           />
         );
-
-      case 'tissue-recovery':
-        // Show tissue recovery tab if we have either tissue_recovery_information or tissue_eligibility
-        const tissueRecoveryData = extractionData?.extracted_data?.tissue_recovery_information || extractionData?.extracted_data?.tissue_recovery;
-        const eligibilityData = extractionData?.tissue_eligibility;
-        
-        // Always show the tab if we have eligibility data, even if recovery info is missing
-        if (!tissueRecoveryData && !eligibilityData) {
-          return (
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-500">Tissue recovery data not available.</p>
-            </div>
-          );
-        }
-        
-        return <TissueRecoverySection 
-          data={tissueRecoveryData} 
-          eligibilityData={eligibilityData}
-          documents={documents}
-          onCitationClick={handleCitationClick} 
-        />;
-
 
       case 'conditional-docs':
         if (!extractionData?.conditional_documents) {
@@ -1362,6 +1585,18 @@ export default function Summary() {
         }
         return <PlasmaDilutionSection data={plasmaDilutionData} documents={documents} onCitationClick={handleCitationClick} />;
 
+      case 'eligibility':
+        return <EligibilityStatusSection eligibility={extractionData?.eligibility} />;
+
+      case 'criteria':
+        return (
+          <CriteriaEvaluationsSection 
+            criteriaEvaluations={extractionData?.criteria_evaluations}
+            documents={documents}
+            onCitationClick={handleCitationClick}
+          />
+        );
+
       default:
         return null;
     }
@@ -1369,21 +1604,26 @@ export default function Summary() {
 
   // Handle citation click
   const handleCitationClick = async (sourceDocument: string, pageNumber?: number, documentId?: number) => {
-    // If document_id is provided, use proxied PDF endpoint (avoids CORS issues)
+    // If document_id is provided, use it directly - backend will query the database
+    // We don't need the document to be in the local documents array
     if (documentId) {
-      const document = documents.find(doc => doc.id === documentId);
-      if (document) {
-        try {
-          // Use proxied PDF endpoint that streams with proper CORS headers
-          const pdfUrl = apiService.getDocumentPdfUrl(documentId);
-          setSelectedPdfUrl(pdfUrl);
-          setSelectedPageNumber(pageNumber || undefined);
-          setSelectedDocumentName(document.original_filename || document.filename || sourceDocument);
-          return;
-        } catch (error) {
-          console.error('Error getting PDF URL:', error);
-          // Fall through to fallback behavior
-        }
+      try {
+        // Use proxied PDF endpoint that streams with proper CORS headers
+        // The backend endpoint queries the database directly, so we don't need the document locally
+        const pdfUrl = apiService.getDocumentPdfUrl(documentId);
+        
+        // Try to get document name from local array if available, otherwise use sourceDocument
+        const document = documents.find(doc => doc.id === documentId);
+        const documentName = document?.original_filename || document?.filename || sourceDocument;
+        
+        setSelectedPdfUrl(pdfUrl);
+        setSelectedPageNumber(pageNumber || undefined);
+        setSelectedDocumentName(documentName);
+        setSelectedDocumentId(documentId);
+        return;
+      } catch (error) {
+        console.error('Error getting PDF URL:', error);
+        // Fall through to fallback behavior
       }
     }
     
@@ -1402,6 +1642,7 @@ export default function Summary() {
           setSelectedPdfUrl(pdfUrl);
           setSelectedPageNumber(pageNumber || undefined);
           setSelectedDocumentName(matchedDocument.original_filename || matchedDocument.filename || sourceDocument);
+          setSelectedDocumentId(matchedDocument.id);
           return;
         } catch (error) {
           console.error('Error getting PDF URL for matched document:', error);
@@ -1524,8 +1765,10 @@ export default function Summary() {
                     setSelectedPdfUrl(null);
                     setSelectedPageNumber(null);
                     setSelectedDocumentName(null);
+                    setSelectedDocumentId(null);
                   }}
                   documentName={selectedDocumentName || 'Document'}
+                  documentId={selectedDocumentId || undefined}
                 />
               </div>
             </div>
