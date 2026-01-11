@@ -370,7 +370,7 @@ export default function DonorManagement() {
     {
       key: 'status',
       title: 'Status',
-      className: 'w-24',
+      className: 'w-[72px]',
       render: (donor: DonorWithDetails & { isLatestDonor?: boolean }) => {
         // Only show if donor has documents uploaded
         if (!donor.hasDocuments) {
@@ -381,7 +381,7 @@ export default function DonorManagement() {
         const status = donor.processingStatus || 'pending';
         
         const statusLabels: Record<string, string> = {
-          'completed': 'Completed',
+          'completed': 'Done',
           'processing': 'Processing',
           'pending': 'Pending',
           'rejected': 'Rejected',
@@ -390,7 +390,7 @@ export default function DonorManagement() {
         return (
           <span className={getStatusBadge(status)}>
             {getStatusIcon(status)}
-            {statusLabels[status] || 'Processing'}
+            <span className="whitespace-nowrap">{statusLabels[status] || 'Processing'}</span>
           </span>
         );
       }
@@ -398,7 +398,7 @@ export default function DonorManagement() {
     {
       key: 'actions',
       title: 'Actions',
-      className: 'w-28 text-right',
+      className: 'w-32 text-right',
       render: (donor: Donor) => (
         <div className="flex justify-end space-x-1">
           <button
