@@ -166,18 +166,27 @@ export default function Documents() {
   };
 
   const handleDownloadDocument = async (document: Document) => {
-    if (!document.azure_blob_url) {
-      setError('Document download URL not available');
-      return;
-    }
-
     try {
-      // For now, open the Azure blob URL in a new tab
-      // In a real implementation, you might want to proxy the download through your backend
-      window.open(document.azure_blob_url, '_blank');
+      const pdfUrl = apiService.getDocumentPdfUrl(document.id);
+
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(pdfUrl, { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to download document: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (err) {
       console.error('Error downloading document:', err);
-      setError('Failed to download document');
+      setError(err instanceof Error ? err.message : 'Failed to download document');
     }
   };
 

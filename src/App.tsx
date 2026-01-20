@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute, AdminRoute, DocUploaderRoute, MedicalDirectorRoute } from './components/auth/ProtectedRoute';
+import RoleBasedRedirect from './components/auth/RoleBasedRedirect';
 import Header from './components/layout/Header';
 import Summary from './pages/Summary';
 import LoginPage from './components/auth/LoginPage';
@@ -39,7 +40,7 @@ function App() {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/feedback" element={<PlatformFeedback />} />
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/" element={<RoleBasedRedirect />} />
                   </Routes>
                 </ProtectedRoute>
               }

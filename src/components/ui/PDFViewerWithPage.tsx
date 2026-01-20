@@ -3,7 +3,6 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { ZoomIn, ZoomOut, ExternalLink, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { apiService } from '../../services/api';
 
 // Set up PDF.js worker - must match react-pdf's internal pdfjs-dist version (5.4.296)
 // react-pdf 10.2.0 uses pdfjs-dist 5.4.296 internally, so we must use the same version
@@ -157,8 +156,9 @@ export default function PDFViewerWithPage({
   };
 
   // Calculate width for sidebar with zoom
-  const baseWidth = Math.min(600, window.innerWidth * 0.3);
-  const pageWidth = baseWidth * scale;
+  // (use width-only scaling; don't also pass react-pdf "scale" prop to avoid double-scaling)
+  const baseWidth = Math.min(700, Math.max(360, window.innerWidth * 0.32));
+  const pageWidth = Math.round(baseWidth * scale);
 
   // Zoom controls
   const handleZoomIn = () => {
@@ -197,32 +197,31 @@ export default function PDFViewerWithPage({
   };
 
   const handleOpenInNewTab = async () => {
-    const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
-    
-    if (isApiUrl && documentId) {
-      try {
-        const sasData = await apiService.getDocumentSasUrl(documentId, 60);
-        window.open(sasData.sas_url, '_blank');
-      } catch (error) {
-        console.error('Error fetching SAS URL:', error);
-        window.open(pdfUrl, '_blank');
+    try {
+      // Open via a Blob URL so we don't rely on Azure public access/SAS,
+      // and so authenticated API endpoints still work (we can attach auth headers here).
+      const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
+      const token = localStorage.getItem('authToken');
+
+      const headers: HeadersInit = {};
+      if (isApiUrl && token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    } else if (isApiUrl && !documentId) {
-      const match = pdfUrl.match(/\/documents\/(\d+)\/pdf/);
-      if (match) {
-        const docId = parseInt(match[1]);
-        try {
-          const sasData = await apiService.getDocumentSasUrl(docId, 60);
-          window.open(sasData.sas_url, '_blank');
-        } catch (error) {
-          console.error('Error fetching SAS URL:', error);
-          window.open(pdfUrl, '_blank');
-        }
-      } else {
-        window.open(pdfUrl, '_blank');
+
+      const response = await fetch(pdfUrl, { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to open PDF: ${response.status} ${response.statusText}`);
       }
-    } else {
-      window.open(pdfUrl, '_blank');
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      // Let the new tab load first, then revoke (best-effort)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (error) {
+      console.error('Error opening PDF in new tab:', error);
+      // Fall back to opening the URL directly
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -336,7 +335,7 @@ export default function PDFViewerWithPage({
       </div>
 
       {/* PDF Content */}
-      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-100 px-6 py-4">
+      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-100 p-3">
         {error ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -345,7 +344,7 @@ export default function PDFViewerWithPage({
             </div>
           </div>
         ) : pdfData ? (
-          <div className="flex flex-col items-center min-w-full">
+          <div className="min-w-max">
             <Document
               file={pdfData}
               onLoadSuccess={onDocumentLoadSuccess}
@@ -365,15 +364,14 @@ export default function PDFViewerWithPage({
                   <div
                     key={`page_${pageNum}`}
                     ref={isTargetPage ? pageRef : null}
-                    className={`mb-4 ${isTargetPage ? 'ring-2 ring-blue-500 rounded shadow-lg' : ''}`}
-                    style={{ minWidth: 'fit-content', paddingLeft: '8vh', paddingRight: '2vh' }}
+                    className={`mb-3 bg-white rounded shadow ${isTargetPage ? 'ring-2 ring-blue-500' : ''}`}
+                    style={{ width: 'fit-content' }}
                   >
                     <Page
                       pageNumber={pageNum}
                       renderTextLayer={false}
                       renderAnnotationLayer={true}
                       width={pageWidth}
-                      scale={scale}
                       onLoadError={onPageLoadError}
                       loading={
                         <div className="flex items-center justify-center p-4 bg-white rounded shadow min-h-[400px]">

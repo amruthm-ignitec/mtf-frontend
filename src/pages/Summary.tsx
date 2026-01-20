@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FindingSummary, DonorRecord, MDSummarySection, ExtractionDataResponse } from '../types';
 import { ApprovalStatus, ApprovalType, PastDataResponse } from '../types/donorApproval';
@@ -142,6 +142,8 @@ export default function Summary() {
   const [selectedPageNumber, setSelectedPageNumber] = useState<number | null>(null);
   const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [pdfPanelWidth, setPdfPanelWidth] = useState<number>(420);
+  const isResizingPdfPanelRef = useRef(false);
 
   // useEffect(() => {
   //   console.log('Current ID:', id);
@@ -1728,53 +1730,91 @@ export default function Summary() {
       )}
 
       {/* Tab Content with PDF Viewer */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className={selectedPdfUrl ? "lg:col-span-2" : "lg:col-span-3"}>
-      {renderTabContent()}
+      {!selectedPdfUrl ? (
+        <div className="grid grid-cols-1 gap-6">
+          {renderTabContent()}
         </div>
-        {/* PDF Viewer Sidebar - Only shown when citation is clicked */}
-        {selectedPdfUrl && (
-          <div className="lg:col-span-1 sticky top-4 h-[calc(100vh-2rem)]">
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 h-full flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">
-                    {selectedDocumentName || 'Document'}
-                  </h3>
-                  {selectedPageNumber && (
-                    <p className="text-xs text-gray-500">Page {selectedPageNumber}</p>
-                  )}
+      ) : (
+        <div
+          className="flex flex-col lg:flex-row gap-6"
+          onMouseMove={(e) => {
+            if (!isResizingPdfPanelRef.current) return;
+            // Resize based on mouse X within the page; clamp to sensible bounds
+            const max = Math.min(720, Math.floor(window.innerWidth * 0.6));
+            const min = 320;
+            const next = Math.max(min, Math.min(max, window.innerWidth - e.clientX - 24));
+            setPdfPanelWidth(next);
+          }}
+          onMouseUp={() => {
+            isResizingPdfPanelRef.current = false;
+          }}
+          onMouseLeave={() => {
+            isResizingPdfPanelRef.current = false;
+          }}
+        >
+          <div className="flex-1 min-w-0">
+            {renderTabContent()}
+          </div>
+
+          {/* PDF Viewer Panel */}
+          <div
+            className="relative"
+            style={{ width: pdfPanelWidth }}
+          >
+            {/* Drag handle */}
+            <div
+              className="hidden lg:block absolute -left-3 top-0 h-full w-3 cursor-col-resize"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                isResizingPdfPanelRef.current = true;
+              }}
+              title="Drag to resize"
+            >
+              <div className="h-full w-px mx-auto bg-gray-200" />
+            </div>
+
+            <div className="sticky top-4 h-[calc(100vh-2rem)]">
+              <div className="bg-white rounded-lg shadow-lg border border-gray-200 h-full flex flex-col">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      {selectedDocumentName || 'Document'}
+                    </h3>
+                    {selectedPageNumber && (
+                      <p className="text-xs text-gray-500">Page {selectedPageNumber}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedPdfUrl(null);
+                      setSelectedPageNumber(null);
+                      setSelectedDocumentName(null);
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors ml-2 flex-shrink-0"
+                    aria-label="Close viewer"
+                  >
+                    <XCircle className="w-4 h-4 text-gray-600" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedPdfUrl(null);
-                    setSelectedPageNumber(null);
-                    setSelectedDocumentName(null);
-                  }}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors ml-2 flex-shrink-0"
-                  aria-label="Close viewer"
-                >
-                  <XCircle className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden bg-gray-50">
-                <PDFViewerWithPage
-                  pdfUrl={selectedPdfUrl}
-                  pageNumber={selectedPageNumber || 1}
-                  onClose={() => {
-                    setSelectedPdfUrl(null);
-                    setSelectedPageNumber(null);
-                    setSelectedDocumentName(null);
-                    setSelectedDocumentId(null);
-                  }}
-                  documentName={selectedDocumentName || 'Document'}
-                  documentId={selectedDocumentId || undefined}
-                />
+                <div className="flex-1 overflow-hidden bg-gray-50">
+                  <PDFViewerWithPage
+                    pdfUrl={selectedPdfUrl}
+                    pageNumber={selectedPageNumber || 1}
+                    onClose={() => {
+                      setSelectedPdfUrl(null);
+                      setSelectedPageNumber(null);
+                      setSelectedDocumentName(null);
+                      setSelectedDocumentId(null);
+                    }}
+                    documentName={selectedDocumentName || 'Document'}
+                    documentId={selectedDocumentId || undefined}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
 
       {/* Finding Details Modal */}

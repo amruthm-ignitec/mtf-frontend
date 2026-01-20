@@ -33,7 +33,27 @@ export default function DocumentChecklist({ documents, extractionData }: Documen
   // Check if document is present using extraction data
   const isDocumentPresent = (extractionKey: string): boolean => {
     if (!extractionData?.extracted_data) return false;
-    const section = extractionData.extracted_data[extractionKey];
+    
+    // Special handling for Infectious Disease Testing so it matches the Summary page logic:
+    // treat it as present if either the section's `present` flag is true OR
+    // we have serology/culture results populated at the top level.
+    if (extractionKey === 'infectious_disease_testing') {
+      const section: any = (extractionData.extracted_data as any)[extractionKey];
+      const hasPresentFlag = section?.present === true;
+
+      const hasSerology =
+        !!extractionData.serology_results &&
+        !!extractionData.serology_results.result &&
+        Object.keys(extractionData.serology_results.result).length > 0;
+
+      const hasCulture =
+        Array.isArray(extractionData.culture_results?.result) &&
+        extractionData.culture_results.result.length > 0;
+
+      return hasPresentFlag || hasSerology || hasCulture;
+    }
+
+    const section = (extractionData.extracted_data as any)[extractionKey];
     return section?.present === true;
   };
 

@@ -172,27 +172,16 @@ export default function ConditionalDocumentsSection({
         </Card>
       )}
 
-      {/* Autopsy Report */}
+      {/* Autopsy */}
       {autopsy_report && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <FileSearch className="w-5 h-5 text-red-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Autopsy Report</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Autopsy</h3>
             </div>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium border ${getConditionalStatusColor(
-                autopsy_report.conditional_status
-              )}`}
-            >
-              {autopsy_report.conditional_status}
-            </span>
           </div>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Condition Required</label>
-              <p className="text-sm text-gray-900 mt-1">{autopsy_report.condition_required}</p>
-            </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Autopsy Performed</label>
               <p className="text-sm text-gray-900 mt-1">

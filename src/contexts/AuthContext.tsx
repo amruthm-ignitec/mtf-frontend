@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<User> => {
     const response = await apiService.login({ email, password });
     
     // Store token
@@ -53,6 +53,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Store user role in localStorage for quick access
     localStorage.setItem('userRole', userData.role);
+
+    return userData;
   };
 
   const logout = async (): Promise<void> => {

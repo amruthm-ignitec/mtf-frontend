@@ -34,13 +34,14 @@ export interface UserUpdate {
   full_name?: string;
   role?: UserRole;
   is_active?: boolean;
+  password?: string;
 }
 
 export interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<User>;
+  logout: () => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
