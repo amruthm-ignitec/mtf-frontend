@@ -27,6 +27,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Table from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Document {
   id: number;
@@ -49,6 +50,8 @@ interface Document {
 export default function Documents() {
   const { donorId } = useParams<{ donorId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canViewSummary = user?.role === 'admin' || user?.role === 'medical_director';
   const [donor, setDonor] = useState<Donor | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -277,7 +280,7 @@ export default function Documents() {
       className: 'text-right',
       render: (doc: Document) => (
         <div className="flex justify-end space-x-2">
-          {doc.status === 'completed' && (
+          {doc.status === 'completed' && canViewSummary && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -372,8 +375,8 @@ export default function Documents() {
             >
               Refresh
             </Button>
-            {/* Show View Summary button if there are completed documents */}
-            {documents.some(doc => doc.status === 'completed') && donorId && (
+            {/* Show View Summary button only for roles allowed to view summary and if there are completed documents */}
+            {canViewSummary && documents.some(doc => doc.status === 'completed') && donorId && (
               <Button
                 onClick={() => {
                   if (!donorId) {

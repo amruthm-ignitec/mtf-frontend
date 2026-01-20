@@ -31,10 +31,12 @@ function App() {
                   <Routes>
                     <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                     <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
-                    <Route path="/donors" element={<AdminRoute><DonorManagement /></AdminRoute>} />
+                    {/* Donor list is visible to all authenticated roles */}
+                    <Route path="/donors" element={<DonorManagement />} />
                     <Route path="/documents/:donorId" element={<Documents />} />
                     <Route path="/queue" element={<Queue />} />
-                    <Route path="/summary/:id" element={<Summary />} />
+                    {/* Only Admin and Medical Director can access donor summary */}
+                    <Route path="/summary/:id" element={<MedicalDirectorRoute><Summary /></MedicalDirectorRoute>} />
                     <Route path="/upload/:donorId?" element={<DocUploaderRoute><Upload /></DocUploaderRoute>} />
                     <Route path="/intelligence" element={<MedicalDirectorRoute><Intelligence /></MedicalDirectorRoute>} />
                     <Route path="/profile" element={<Profile />} />

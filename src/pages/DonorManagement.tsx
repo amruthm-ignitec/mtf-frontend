@@ -10,6 +10,7 @@ import StatsCard from '../components/ui/StatsCard';
 import Table from '../components/ui/Table';
 import DonorCreateForm from '../components/donor/DonorCreateForm';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DonorWithDetails extends Donor {
   hasDocuments?: boolean; // Track if donor has any documents uploaded
@@ -48,6 +49,8 @@ export default function DonorManagement() {
   const [filterPriority, setFilterPriority] = useState<'all' | 'priority' | 'normal'>('all');
   const [donorsWithDetails, setDonorsWithDetails] = useState<DonorWithDetails[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const handleDonorCreated = async () => {
     setShowCreateForm(false);
@@ -56,6 +59,9 @@ export default function DonorManagement() {
   };
 
   const handleDeleteDonor = async (donorId: number) => {
+    if (!isAdmin) {
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this donor? This action cannot be undone.')) {
       return;
     }
@@ -68,6 +74,9 @@ export default function DonorManagement() {
   };
 
   const handleTogglePriority = async (donorId: number, currentPriority: boolean) => {
+    if (!isAdmin) {
+      return;
+    }
     try {
       await togglePriority(donorId, currentPriority);
     } catch (err) {
@@ -298,13 +307,15 @@ export default function DonorManagement() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (!isAdmin) return;
                 handleTogglePriority(donor.id, donor.is_priority);
               }}
               className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                 donor.is_priority
-                  ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-gray-100 text-gray-800'
+              } ${isAdmin ? 'hover:bg-yellow-200 hover:bg-gray-200' : ''}`}
+              disabled={!isAdmin}
             >
               <Star className={`w-3 h-3 mr-1 ${donor.is_priority ? 'text-yellow-600' : 'text-gray-400'}`} />
               {donor.is_priority ? 'High Priority' : 'Normal'}
@@ -408,24 +419,28 @@ export default function DonorManagement() {
           >
             <FileText className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => handleTogglePriority(donor.id, donor.is_priority)}
-            className={`p-1 rounded ${
-              donor.is_priority 
-                ? 'text-yellow-600 hover:bg-yellow-100' 
-                : 'text-gray-400 hover:bg-gray-100'
-            }`}
-            title={donor.is_priority ? 'Remove priority' : 'Set priority'}
-          >
-            <Star className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleDeleteDonor(donor.id)}
-            className="text-red-600 hover:bg-red-100 p-1 rounded"
-            title="Delete donor"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => handleTogglePriority(donor.id, donor.is_priority)}
+                className={`p-1 rounded ${
+                  donor.is_priority 
+                    ? 'text-yellow-600 hover:bg-yellow-100' 
+                    : 'text-gray-400 hover:bg-gray-100'
+                }`}
+                title={donor.is_priority ? 'Remove priority' : 'Set priority'}
+              >
+                <Star className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDeleteDonor(donor.id)}
+                className="text-red-600 hover:bg-red-100 p-1 rounded"
+                title="Delete donor"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       )
     }
@@ -456,13 +471,15 @@ export default function DonorManagement() {
               Manage donor records and set processing priorities
             </p>
           </div>
-          <Button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Donor
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Donor
+            </Button>
+          )}
         </div>
       </div>
 
