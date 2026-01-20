@@ -172,24 +172,30 @@ export default function Documents() {
     try {
       const pdfUrl = apiService.getDocumentPdfUrl(document.id);
 
+      // Check if this is an API URL that needs authentication
+      const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
       const token = localStorage.getItem('authToken');
+
       const headers: HeadersInit = {};
-      if (token) {
+      if (isApiUrl && token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
       const response = await fetch(pdfUrl, { headers });
       if (!response.ok) {
-        throw new Error(`Failed to download document: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to open PDF: ${response.status} ${response.statusText}`);
       }
 
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      // Let the new tab load first, then revoke (best-effort)
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (err) {
-      console.error('Error downloading document:', err);
-      setError(err instanceof Error ? err.message : 'Failed to download document');
+      console.error('Error opening PDF in new tab:', err);
+      // Fall back to opening the URL directly
+      const pdfUrl = apiService.getDocumentPdfUrl(document.id);
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
