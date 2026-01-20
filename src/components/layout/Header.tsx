@@ -66,22 +66,24 @@ export default function Header() {
           </div>
           <div className="flex-1 flex justify-between items-center px-4 sm:px-6 lg:px-8">
             <nav className="hidden sm:ml-6 sm:flex sm:space-x-4">
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
-              >
-                <LayoutDashboard className="w-4 h-4 mr-2" />
-                Dashboard
-              </Link>
+              {/* Dashboard is an admin-only page, so only show it for admins */}
               {user?.role === 'admin' && (
                 <Link
-                  to="/donors"
+                  to="/dashboard"
                   className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
                 >
-                  <Users className="w-4 h-4 mr-2" />
-                  Donors
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Dashboard
                 </Link>
               )}
+              {/* Donor list is visible to all authenticated roles; admin-only actions are restricted inside the page */}
+              <Link
+                to="/donors"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Donors
+              </Link>
               <Link
                 to="/feedback"
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
@@ -130,14 +132,26 @@ export default function Header() {
                       <User className="w-4 h-4 mr-2" />
                       Profile
                     </Link>
+                    {/* App-level settings are available to all roles */}
                     <Link
-                      to="/admin"
+                      to="/settings"
                       onClick={() => setIsDropdownOpen(false)}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <Settings className="w-4 h-4 mr-2" />
                       Settings
                     </Link>
+                    {/* Admin-only user/platform administration */}
+                    {user?.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Admin
+                      </Link>
+                    )}
                     <Link
                       to="/support"
                       onClick={() => setIsDropdownOpen(false)}
