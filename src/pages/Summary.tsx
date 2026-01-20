@@ -22,6 +22,37 @@ import Card from '../components/ui/Card';
 import PDFViewer from '../components/ui/PDFViewer';
 import PDFViewerWithPage from '../components/ui/PDFViewerWithPage';
 
+// Helper to resolve Cause of Death from terminal_information, falling back to criteria_evaluations
+const getCauseOfDeathFromExtraction = (
+  extractionData?: ExtractionDataResponse | null
+): string | null => {
+  if (!extractionData) return null;
+
+  // Primary source: terminal_information (if backend populated it)
+  if (extractionData.terminal_information?.cause_of_death) {
+    return extractionData.terminal_information.cause_of_death;
+  }
+
+  const criteria = extractionData.criteria_evaluations;
+  if (!criteria) return null;
+
+  // Reuse the same criteria set that Key Medical Findings uses
+  const causeOfDeathCriteria = [
+    'High Risk Non-IV Related Drug Use',
+    'High Risk Behavior',
+    'Cause of Death',
+  ];
+
+  for (const criterionName of causeOfDeathCriteria) {
+    const value = criteria[criterionName]?.extracted_data?.cause_of_death;
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+};
+
 // Inline components
 const ClinicalInformation = ({ donor }: { donor: DonorRecord }) => (
   <div className="space-y-6">
@@ -194,7 +225,7 @@ export default function Summary() {
             age: donorFromState.age || extractionDataResponse.extracted_data?.donor_information?.extracted_data?.Age ? 
               Number(extractionDataResponse.extracted_data.donor_information.extracted_data.Age) : null,
             gender: donorFromState.gender || extractionDataResponse.extracted_data?.donor_information?.extracted_data?.Gender || null,
-            causeOfDeath: extractionDataResponse.terminal_information?.cause_of_death || null,
+            causeOfDeath: getCauseOfDeathFromExtraction(extractionDataResponse),
             uploadTimestamp: donorFromState.created_at || extractionDataResponse.processing_timestamp || new Date().toISOString(),
             requiredDocuments: [],
           };
@@ -208,7 +239,7 @@ export default function Summary() {
             name: extractionDataResponse.donor_id ? `Donor ${extractionDataResponse.donor_id}` : `Donor ${id}`,
             age: donorInfo.Age ? Number(donorInfo.Age) : null,
             gender: donorInfo.Gender || null,
-            causeOfDeath: extractionDataResponse.terminal_information?.cause_of_death || null,
+            causeOfDeath: getCauseOfDeathFromExtraction(extractionDataResponse),
             uploadTimestamp: extractionDataResponse.processing_timestamp || new Date().toISOString(),
             requiredDocuments: [],
           };
@@ -402,12 +433,16 @@ export default function Summary() {
                       Terminal Information
                     </h3>
                     <div className="space-y-3">
-                      {extractionData.terminal_information?.cause_of_death && (
-                        <div className="bg-purple-50 p-2 rounded border border-purple-200">
-                          <div className="text-xs text-purple-800">Cause of Death</div>
-                          <div className="text-sm font-medium text-purple-900">{extractionData.terminal_information.cause_of_death || '-'}</div>
-                        </div>
-                      )}
+                      {(() => {
+                        const causeOfDeath = getCauseOfDeathFromExtraction(extractionData);
+                        if (!causeOfDeath) return null;
+                        return (
+                          <div className="bg-purple-50 p-2 rounded border border-purple-200">
+                            <div className="text-xs text-purple-800">Cause of Death</div>
+                            <div className="text-sm font-medium text-purple-900">{causeOfDeath}</div>
+                          </div>
+                        );
+                      })()}
                       <div className="grid grid-cols-2 gap-3">
                         <div className={`p-2 rounded border ${
                           extractionData.terminal_information?.hypotension === 'Present' 
@@ -1454,19 +1489,23 @@ export default function Summary() {
                     Terminal Events & Medications
                   </h3>
                   <div className="space-y-4">
-                    {extractionData.terminal_information?.cause_of_death && (
-                      <div>
-                        <h4 className="text-xs font-medium text-gray-500 mb-2">Cause of Death Details</h4>
-                        <div className="bg-gray-50 p-2 rounded">
-                          <p className="text-sm font-medium">{extractionData.terminal_information.cause_of_death || '-'}</p>
-                          {extractionData.processing_timestamp && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Processing Time: {new Date(extractionData.processing_timestamp).toLocaleString()}
-                            </p>
-                          )}
+                    {(() => {
+                      const causeOfDeath = getCauseOfDeathFromExtraction(extractionData);
+                      if (!causeOfDeath) return null;
+                      return (
+                        <div>
+                          <h4 className="text-xs font-medium text-gray-500 mb-2">Cause of Death Details</h4>
+                          <div className="bg-gray-50 p-2 rounded">
+                            <p className="text-sm font-medium">{causeOfDeath}</p>
+                            {extractionData.processing_timestamp && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Processing Time: {new Date(extractionData.processing_timestamp).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     <div>
                       <h4 className="text-xs font-medium text-gray-500 mb-2">Terminal Course</h4>
                       <div className="grid grid-cols-2 gap-3">
