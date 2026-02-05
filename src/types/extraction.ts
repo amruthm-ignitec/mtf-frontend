@@ -407,6 +407,7 @@ export interface CriteriaEvaluation {
   evaluation_reasoning?: string;
   tissue_types?: string[];
   document_ids?: number[]; // Document IDs where this criterion data was extracted from
+  source_pages?: number[]; // Page numbers where this criterion data was found
 }
 
 // Eligibility Status

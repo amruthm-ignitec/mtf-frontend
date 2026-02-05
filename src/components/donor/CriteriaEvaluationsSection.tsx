@@ -268,10 +268,14 @@ export default function CriteriaEvaluationsSection({
                       <div className="flex flex-wrap gap-2">
                         {getExtractedDataBadges(evaluation.extracted_data).map((badge, idx) => {
                           // Get document_id from evaluation (if available)
-                          const documentIds = (evaluation as any).document_ids || [];
+                          const documentIds = evaluation.document_ids || [];
                           const firstDocumentId = documentIds.length > 0 ? documentIds[0] : null;
                           const document = firstDocumentId ? documents.find(d => d.id === firstDocumentId) : null;
                           const documentName = document?.original_filename || document?.filename || 'Document';
+                          
+                          // Get page number from source_pages (use first page if available)
+                          const sourcePages = evaluation.source_pages || [];
+                          const firstPageNumber = sourcePages.length > 0 ? sourcePages[0] : undefined;
                           
                           // Make badge clickable if we have document info and onCitationClick handler
                           const isClickable = firstDocumentId && onCitationClick;
@@ -281,7 +285,7 @@ export default function CriteriaEvaluationsSection({
                               key={idx}
                               onClick={() => {
                                 if (isClickable && onCitationClick) {
-                                  onCitationClick(documentName, undefined, firstDocumentId);
+                                  onCitationClick(documentName, firstPageNumber, firstDocumentId);
                                 }
                               }}
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs ${
@@ -289,7 +293,7 @@ export default function CriteriaEvaluationsSection({
                                   ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 cursor-pointer transition-colors'
                                   : 'bg-blue-50 border border-blue-200'
                               }`}
-                              title={isClickable ? `Click to view source document: ${documentName}` : undefined}
+                              title={isClickable ? `Click to view source document: ${documentName}${firstPageNumber ? ` (Page ${firstPageNumber})` : ''}` : undefined}
                             >
                               <span className="font-medium text-blue-900">{badge.key}:</span>
                               <span className="text-blue-700">{badge.value}</span>
