@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute, AdminRoute, DocUploaderRoute, MedicalDirectorRoute } from './components/auth/ProtectedRoute';
 import RoleBasedRedirect from './components/auth/RoleBasedRedirect';
@@ -8,7 +8,7 @@ import LoginPage from './components/auth/LoginPage';
 import Queue from './pages/Queue';
 import Upload from './pages/Upload';
 import Admin from './pages/Admin';
-import Dashboard from './pages/Dashboard';
+// import Dashboard from './pages/Dashboard';
 import Intelligence from './pages/Intelligence';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -30,7 +30,9 @@ function App() {
                   <Header />
                   <Routes>
                     <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                    {/* Dashboard route commented out per requirements to remove the Dashboard page
                     <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+                    */}
                     {/* Donor list is visible to all authenticated roles */}
                     <Route path="/donors" element={<DonorManagement />} />
                     <Route path="/documents/:donorId" element={<Documents />} />

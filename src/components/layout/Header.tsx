@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LayoutDashboard, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users, MessageSquare } from 'lucide-react';
+import { User, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users, MessageSquare } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationDropdown from '../notifications/NotificationDropdown';
@@ -66,7 +66,11 @@ export default function Header() {
           </div>
           <div className="flex-1 flex justify-between items-center px-4 sm:px-6 lg:px-8">
             <nav className="hidden sm:ml-6 sm:flex sm:space-x-4">
-              {/* Dashboard is an admin-only page, so only show it for admins */}
+              {/* 
+                Dashboard link removed per requirements:
+                "comment out the dashboard page entirely even on the topbar".
+                If needed in future, restore the block below.
+
               {user?.role === 'admin' && (
                 <Link
                   to="/dashboard"
@@ -76,6 +80,7 @@ export default function Header() {
                   Dashboard
                 </Link>
               )}
+              */}
               {/* Donor list is visible to all authenticated roles; admin-only actions are restricted inside the page */}
               <Link
                 to="/donors"

@@ -3,7 +3,7 @@ import { UserRole } from '../../types/auth';
 export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case 'admin':
-      return '/dashboard';
+      return '/donors';
     case 'doc_uploader':
       return '/upload';
     case 'medical_director':
@@ -12,5 +12,3 @@ export function getDefaultRouteForRole(role: UserRole): string {
       return '/profile';
   }
 }
-
-
