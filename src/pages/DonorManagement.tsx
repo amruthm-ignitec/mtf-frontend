@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, Filter, Users, AlertCircle, Star, Trash2, Clock, FileText, AlertTriangle, XCircle, CheckCircle } from 'lucide-react';
 import { Donor } from '../types/donor';
 import { useDonors } from '../hooks';
+import { apiService } from '../services/api';
 import { formatDate, calculateAge } from '../utils';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -58,7 +59,7 @@ export default function DonorManagement() {
     await fetchDonors();
   };
 
-  const handleDeleteDonor = async (donorId: number) => {
+  const handleDeleteDonor = async (donorId: string) => {
     if (!isAdmin) {
       return;
     }
@@ -73,7 +74,7 @@ export default function DonorManagement() {
     }
   };
 
-  const handleTogglePriority = async (donorId: number, currentPriority: boolean) => {
+  const handleTogglePriority = async (donorId: string, currentPriority: boolean) => {
     if (!isAdmin) {
       return;
     }
@@ -84,97 +85,37 @@ export default function DonorManagement() {
     }
   };
 
-  // Fetch donor details with critical findings and missing documents
-  // Also check which donors have documents uploaded
+  // Fetch donor details with critical findings and missing documents (POC: use apiService)
   useEffect(() => {
     const fetchDonorDetails = async () => {
       if (donors.length === 0) return;
-      
       try {
         setLoadingDetails(true);
-        const apiUrl = import.meta.env.VITE_API_BASE_URL;
-        const token = localStorage.getItem('authToken');
-        
-        // Check which donors have documents uploaded
-        const donorsWithDocs = new Set<number>();
+        const donorsWithDocs = new Set<string>();
         await Promise.all(donors.map(async (donor) => {
           try {
-            const docsResponse = await fetch(`${apiUrl}/documents/donor/${donor.id}`, {
-              headers: {
-                ...(token && { Authorization: `Bearer ${token}` }),
-              },
-            });
-            if (docsResponse.ok) {
-              const docs = await docsResponse.json();
-              if (docs && Array.isArray(docs) && docs.length > 0) {
-                donorsWithDocs.add(donor.id);
-              }
-            }
-          } catch (err) {
-            // Silently fail - donor might not have documents yet
+            const docs = await apiService.getDonorDocuments(donor.id);
+            if (Array.isArray(docs) && docs.length > 0) donorsWithDocs.add(donor.id);
+          } catch {
+            // Silently fail
           }
         }));
-        
-        const response = await fetch(`${apiUrl}/donors/queue/details`, {
-          headers: {
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
+        const detailsData = await apiService.getQueueDetails();
+        const merged = donors.map((donor) => {
+          const details = detailsData.find((d: { id: string }) => d.id === donor.id);
+          const hasDocuments = donorsWithDocs.has(donor.id);
+          if (details && hasDocuments) {
+            return { ...donor, ...details, id: donor.id, hasDocuments: true };
+          }
+          if (hasDocuments) {
+            return { ...donor, hasDocuments: true, criticalFindings: undefined, requiredDocuments: undefined, processingStatus: undefined };
+          }
+          return { ...donor, hasDocuments: false, criticalFindings: undefined, requiredDocuments: undefined, processingStatus: undefined };
         });
-        
-        if (response.ok) {
-          const detailsData = await response.json();
-          // Merge details with donors - only add details if donor has documents
-          const merged = donors.map(donor => {
-            const details = detailsData.find((d: any) => d.id === String(donor.id) || d.id === donor.id);
-            const hasDocuments = donorsWithDocs.has(donor.id);
-            
-            if (details && hasDocuments) {
-              // Donor has documents and details from API
-              return {
-                ...donor,
-                ...details,
-                id: donor.id, // Keep original id type
-                hasDocuments: true,
-              };
-            } else if (hasDocuments) {
-              // Donor has documents but no details from queue API - use basic structure
-              return {
-                ...donor,
-                hasDocuments: true,
-                criticalFindings: undefined,
-                requiredDocuments: undefined,
-                processingStatus: undefined,
-              };
-            } else {
-              // Donor has no documents - don't show critical findings or missing documents
-              return {
-                ...donor,
-                hasDocuments: false,
-                criticalFindings: undefined,
-                requiredDocuments: undefined,
-                processingStatus: undefined,
-              };
-            }
-          });
-          setDonorsWithDetails(merged);
-        } else {
-          // If API fails, only add document status, no dummy data
-          const merged = donors.map(donor => {
-            const hasDocuments = donorsWithDocs.has(donor.id);
-            return {
-              ...donor,
-              hasDocuments,
-              criticalFindings: undefined,
-              requiredDocuments: undefined,
-              processingStatus: undefined,
-            };
-          });
-          setDonorsWithDetails(merged);
-        }
+        setDonorsWithDetails(merged);
       } catch (err) {
         console.error('Failed to fetch donor details:', err);
-        // On error, just mark donors without document info
-        const merged = donors.map(donor => ({
+        const merged = donors.map((donor) => ({
           ...donor,
           hasDocuments: false,
           criticalFindings: undefined,
@@ -186,7 +127,6 @@ export default function DonorManagement() {
         setLoadingDetails(false);
       }
     };
-
     fetchDonorDetails();
   }, [donors]);
 

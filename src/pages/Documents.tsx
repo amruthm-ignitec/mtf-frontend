@@ -30,7 +30,7 @@ import Table from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Document {
-  id: number;
+  id: string;
   filename: string;
   original_filename: string;
   file_size: number;
@@ -38,13 +38,9 @@ interface Document {
   document_type: string;
   status: DocumentStatus;
   progress: number;
-  azure_blob_url?: string;
-  processing_result?: string;
-  error_message?: string;
-  created_at: string;
-  updated_at?: string;
-  donor_id: number;
-  uploaded_by: number;
+  donor_id: string;
+  created_at?: string;
+  [key: string]: unknown;
 }
 
 export default function Documents() {
@@ -65,22 +61,10 @@ export default function Documents() {
   console.log('Documents page loaded with donorId:', donorId);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setError('You must be logged in to view documents. Redirecting to login...');
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 2000);
-      return;
-    }
-
-    // Check if donorId is provided
     if (!donorId) {
       setError('No donor ID provided. Please navigate from the donor management page.');
       return;
     }
-
     fetchDonorAndDocuments();
   }, [donorId]);
 
@@ -91,24 +75,29 @@ export default function Documents() {
 
       // Fetch donor details
       const donors = await apiService.getDonors();
-      const selectedDonor = donors.find(d => d.id === parseInt(donorId!));
-      
+      const selectedDonor = donors.find(d => d.id === donorId);
       if (!selectedDonor) {
         setError(`Donor with ID ${donorId} not found. Please check the donor ID and try again.`);
         return;
       }
-      
       setDonor(selectedDonor);
 
-      // Fetch documents for this donor
-      const documentsData = await apiService.getDonorDocuments(Number(donorId));
-      
-      // Use the actual status from backend - don't override it
-      setDocuments(documentsData);
+      const documentsData = await apiService.getDonorDocuments(donorId);
+      const mapped: Document[] = (documentsData as { id: string; donor_id: string; filename: string; status: string }[]).map((d) => ({
+        id: d.id,
+        donor_id: d.donor_id,
+        filename: d.filename,
+        original_filename: d.filename,
+        file_size: 0,
+        file_type: 'application/pdf',
+        document_type: 'Medical',
+        status: (d.status?.toLowerCase() || 'queued') as DocumentStatus,
+        progress: d.status === 'COMPLETED' ? 100 : 0,
+      }));
+      setDocuments(mapped);
 
-      // Try to fetch extraction data for conditional documents status
       try {
-        const extraction = await apiService.getDonorExtractionData(Number(donorId));
+        const extraction = await apiService.getDonorExtractionData(donorId);
         setExtractionData(extraction);
       } catch (err) {
         // Extraction data is optional, so we don't show an error if it fails
@@ -143,24 +132,10 @@ export default function Documents() {
     setRefreshing(false);
   };
 
-  const handleDeleteDocument = async (documentId: number) => {
-    if (!window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-      return;
-    }
-
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) return;
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/documents/${documentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete document');
-      }
-
-      // Remove document from local state
+      await apiService.deleteDocument(documentId);
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
     } catch (err) {
       console.error('Error deleting document:', err);
@@ -171,11 +146,8 @@ export default function Documents() {
   const handleDownloadDocument = async (document: Document) => {
     try {
       const pdfUrl = apiService.getDocumentPdfUrl(document.id);
-
-      // Check if this is an API URL that needs authentication
       const isApiUrl = pdfUrl.includes('/documents/') && pdfUrl.includes('/pdf');
       const token = localStorage.getItem('authToken');
-
       const headers: HeadersInit = {};
       if (isApiUrl && token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -277,7 +249,7 @@ export default function Documents() {
       key: 'uploaded',
       title: 'Uploaded',
       render: (doc: Document) => (
-        <span className="text-sm text-gray-500">{formatDate(doc.created_at)}</span>
+        <span className="text-sm text-gray-500">{doc.created_at ? formatDate(doc.created_at) : '—'}</span>
       )
     },
     {
@@ -312,8 +284,7 @@ export default function Documents() {
               handleDownloadDocument(doc);
             }}
             className="text-blue-600 hover:text-blue-800 p-1 rounded"
-            title="Download document"
-            disabled={!doc.azure_blob_url}
+            title="View / Download PDF"
           >
             <Download className="w-4 h-4" />
           </button>

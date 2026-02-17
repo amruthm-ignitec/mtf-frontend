@@ -90,12 +90,18 @@ export default function Header() {
                 Donors
               </Link>
               <Link
-                to="/feedback"
+                to="/queue"
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Platform Feedback
+                Queue
               </Link>
+              <Link
+                to="/upload"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-md hover:bg-gray-50"
+              >
+                Upload
+              </Link>
+              {/* POC: Platform Feedback, Admin, Settings stubbed - hidden from main nav */}
             </nav>
             <div className="flex items-center">
               <div className="relative mr-4" ref={notificationRef}>

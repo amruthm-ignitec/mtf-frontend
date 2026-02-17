@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthContextType } from '../types/auth';
-import { apiService } from '../services/api';
+
+const MOCK_USER: User = {
+  id: 1,
+  email: 'poc@local',
+  full_name: 'POC User',
+  role: 'doc_uploader',
+  is_active: true,
+  created_at: new Date().toISOString(),
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -13,62 +21,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is authenticated
-  const isAuthenticated = !!user && !!token && apiService.isTokenValid();
+  // POC: no auth - treat as authenticated when mock user is set
+  const isAuthenticated = !!user;
 
-  // Initialize auth state on app load
+  // POC: Initialize with mock user only (no API calls)
   useEffect(() => {
-    const initializeAuth = async () => {
-      const storedToken = apiService.getToken();
-      
-      if (storedToken && apiService.isTokenValid()) {
-        try {
-          setToken(storedToken);
-          const userData = await apiService.getCurrentUser();
-          setUser(userData);
-        } catch {
-          // Token is invalid, clear it
-          apiService.removeToken();
-          setToken(null);
-          setUser(null);
-        }
-      }
-      
-      setIsLoading(false);
-    };
-
-    initializeAuth();
+    setUser(MOCK_USER);
+    setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<User> => {
-    const response = await apiService.login({ email, password });
-    
-    // Store token
-    apiService.setToken(response.access_token);
-    setToken(response.access_token);
-    
-    // Get user data
-    const userData = await apiService.getCurrentUser();
-    setUser(userData);
-    
-    // Store user role in localStorage for quick access
-    localStorage.setItem('userRole', userData.role);
-
-    return userData;
+  const login = async (_email: string, _password: string): Promise<User> => {
+    setUser(MOCK_USER);
+    localStorage.setItem('userRole', MOCK_USER.role);
+    return MOCK_USER;
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      await apiService.logout();
-    } catch (error) {
-      // Even if logout fails on server, clear local state
-      console.warn('Logout request failed:', error);
-    } finally {
-      // Clear local state
-      apiService.removeToken();
-      setToken(null);
-      setUser(null);
-    }
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
   };
 
   const value: AuthContextType = {

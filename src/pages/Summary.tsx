@@ -207,7 +207,7 @@ export default function Summary() {
       try {
         // Fetch extraction data from backend API
         console.log('Loading extraction data from API...');
-        const extractionDataResponse = await apiService.getDonorExtractionData(Number(id));
+        const extractionDataResponse = await apiService.getDonorExtractionData(id!);
         console.log('Extraction data loaded:', extractionDataResponse);
         
         // Set extraction data from API
@@ -219,7 +219,7 @@ export default function Summary() {
         if (donorFromState) {
           // Use donor data passed from Documents page
           donorData = {
-            id: Number(id),
+            id: id!,
             donorName: donorFromState.name || `Donor ${id}`,
             name: donorFromState.name || `Donor ${id}`,
             age: donorFromState.age || extractionDataResponse.extracted_data?.donor_information?.extracted_data?.Age ? 
@@ -231,14 +231,16 @@ export default function Summary() {
           };
           console.log('Using donor data from navigation state:', donorData);
         } else {
-          // Create donor data from extraction data
-          const donorInfo = extractionDataResponse.extracted_data?.donor_information?.extracted_data || {};
+          // Create donor data from extraction data (POC: merged_data shape may differ)
+          const merged = extractionDataResponse.extracted_data as Record<string, unknown> | undefined;
+          const identity = (merged?.Identity || {}) as Record<string, unknown>;
+          const donorInfo = identity;
           donorData = {
-            id: Number(id),
+            id: id!,
             donorName: extractionDataResponse.donor_id ? `Donor ${extractionDataResponse.donor_id}` : `Donor ${id}`,
             name: extractionDataResponse.donor_id ? `Donor ${extractionDataResponse.donor_id}` : `Donor ${id}`,
-            age: donorInfo.Age ? Number(donorInfo.Age) : null,
-            gender: donorInfo.Gender || null,
+            age: donorInfo.Age != null ? Number(donorInfo.Age) : null,
+            gender: (donorInfo.Gender as string) || null,
             causeOfDeath: getCauseOfDeathFromExtraction(extractionDataResponse),
             uploadTimestamp: extractionDataResponse.processing_timestamp || new Date().toISOString(),
             requiredDocuments: [],
@@ -255,7 +257,7 @@ export default function Summary() {
         
         // Fetch documents for checklist
         try {
-          const documentsData = await apiService.getDonorDocuments(Number(id));
+          const documentsData = await apiService.getDonorDocuments(id!);
           setDocuments(documentsData as any);
         } catch (err) {
           console.error('Error fetching documents:', err);
@@ -272,7 +274,7 @@ export default function Summary() {
         // Fetch donor details for missing documents
         try {
           const donorDetails = await apiService.getQueueDetails();
-          const currentDonorDetails = donorDetails.find((d: any) => d.id === Number(id));
+          const currentDonorDetails = donorDetails.find((d: { id: string }) => d.id === id);
           if (currentDonorDetails) {
             setMissingDocuments(currentDonorDetails.requiredDocuments?.filter((doc: any) => doc.status === 'missing') || []);
           }
@@ -285,7 +287,7 @@ export default function Summary() {
         console.error('Error loading extraction data:', err);
         // Fallback to basic donor data if API fails
         const fallbackDonor: DonorRecord = {
-          id: Number(id),
+          id: id!,
           donorName: donorFromState?.name || `Donor ${id}`,
           name: donorFromState?.name || `Donor ${id}`,
           age: donorFromState?.age || null,
@@ -313,7 +315,7 @@ export default function Summary() {
     
     try {
       setLoadingPastData(true);
-      const data = await apiService.getDonorPastData(Number(id));
+      const data = await apiService.getDonorPastData(id!);
       setPastData(data);
     } catch (err) {
       console.error('Error loading past data:', err);

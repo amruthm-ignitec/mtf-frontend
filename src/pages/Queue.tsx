@@ -6,6 +6,7 @@ import {
   XCircle,
   AlertTriangle
 } from 'lucide-react';
+import { apiService } from '../services/api';
 import { DonorRecord, ProcessingStatus, RequiredDocument } from '../types';
 // import { mockFindings } from '../mocks/findings-data';
 
@@ -532,18 +533,12 @@ export default function Queue() {
   useEffect(() => {
     const fetchDonors = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${apiUrl}/donors/queue/details`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch donor data');
-        }
-        const data = await response.json();
+        const data = await apiService.getQueueDetails();
         setDonors(data);
       } catch (err) {
-        console.log(err);
+        console.error('Failed to fetch queue details:', err);
       }
     };
-
     fetchDonors();
   }, []);
 
@@ -598,9 +593,11 @@ export default function Queue() {
               onChange={handleStatusChange}
             >
               <option value="all">All Status</option>
+              <option value="queued">Queued</option>
               <option value="processing">Processing</option>
               <option value="completed">Completed</option>
               <option value="failed">Failed</option>
+              <option value="pending">Pending</option>
             </select>
           </div>
           <div className="flex items-center">

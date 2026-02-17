@@ -23,7 +23,8 @@ interface UploadedFile {
   status: 'uploading' | 'completed' | 'error';
   documentType: string;
   error?: string;
-  stored_document_id?: number;
+  stored_document_id?: string;
+  donor_id?: string;
   documentStatus?: DocumentStatus;
 }
 
@@ -43,27 +44,19 @@ export default function Upload() {
   // Get donorId from URL params or location state
   const donorId = donorIdParam || (location.state as any)?.donorId;
 
-  // Fetch donor details if donorId is provided
+  // Fetch donor details if donorId is provided (optional in POC)
   useEffect(() => {
     const fetchDonor = async () => {
       if (!donorId) {
-        setError('No donor ID provided. Please navigate from the donor documents page.');
         setLoadingDonor(false);
         return;
       }
-
       try {
         setLoadingDonor(true);
         const donorsData = await apiService.getDonors();
-        const selectedDonor = donorsData.find(d => d.id === parseInt(donorId));
-        
-        if (!selectedDonor) {
-          setError(`Donor with ID ${donorId} not found.`);
-          setLoadingDonor(false);
-          return;
-        }
-        
-        setDonor(selectedDonor);
+        const selectedDonor = donorsData.find(d => d.id === donorId);
+        setDonor(selectedDonor ?? null);
+        if (!selectedDonor) setError(`Donor with ID ${donorId} not found.`);
       } catch (err) {
         console.error('Failed to fetch donor:', err);
         setError('Failed to load donor information. Please refresh the page.');
@@ -71,30 +64,15 @@ export default function Upload() {
         setLoadingDonor(false);
       }
     };
-
     fetchDonor();
   }, [donorId]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!donorId) {
-      setError('No donor ID provided. Please navigate from the donor documents page.');
-      return;
-    }
-
-    // Check if user is authenticated
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setError('You must be logged in to upload files. Please log in and try again.');
-      return;
-    }
-    // Filter out files that are too large
-    const validFiles = acceptedFiles.filter(file => file.size <= MAX_FILE_SIZE);
-    const oversizedFiles = acceptedFiles.filter(file => file.size > MAX_FILE_SIZE);
-
-    if (oversizedFiles.length > 0) {
-      setError(`${oversizedFiles.length} file(s) exceeded the 500MB limit and were skipped.`);
-    }
-
+    const validFiles = acceptedFiles.filter(f => f.size <= MAX_FILE_SIZE && f.type === 'application/pdf');
+    const oversized = acceptedFiles.filter(f => f.size > MAX_FILE_SIZE);
+    const nonPdf = acceptedFiles.filter(f => f.type !== 'application/pdf');
+    if (oversized.length > 0) setError(`${oversized.length} file(s) exceeded 500MB and were skipped.`);
+    if (nonPdf.length > 0) setError('Only PDF files are accepted.');
     if (validFiles.length === 0) return;
 
     const newFiles = validFiles.map(file => ({
@@ -102,86 +80,41 @@ export default function Upload() {
       file,
       progress: 0,
       status: 'uploading' as const,
-      documentType: 'Medical History', // default value
+      documentType: 'Medical History',
       documentStatus: 'uploaded' as DocumentStatus
     }));
-
     setUploadedFiles(prev => [...prev, ...newFiles]);
     setIsUploading(true);
     setError(null);
-
-    // Upload each file
     let successCount = 0;
     await Promise.all(newFiles.map(async (fileObj) => {
-      const formData = new FormData();
-      formData.append('file', fileObj.file);
-      formData.append('document_type', fileObj.documentType);
-
       try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/documents/upload?donor_id=${donorId}`, {
-          method: 'POST',
-          headers: {
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          if (response.status === 401) {
-            // Clear invalid token and redirect to login
-            localStorage.removeItem('authToken');
-            window.location.href = '/login';
-            return;
-          }
-          throw new Error(errorText);
-        }
-
-        const data = await response.json();
-
-        setUploadedFiles(prev => 
-          prev.map(f => 
-            f.id === fileObj.id 
-              ? { ...f, status: 'completed', progress: 100, stored_document_id: data.document_id, documentStatus: 'processing' } 
-              : f
-          )
-        );
-        
+        const data = await apiService.uploadDocument(fileObj.file);
+        setUploadedFiles(prev => prev.map(f =>
+          f.id === fileObj.id
+            ? { ...f, status: 'completed', progress: 100, stored_document_id: data.document_id, donor_id: data.donor_id, documentStatus: 'processing' as DocumentStatus }
+            : f
+        ));
         successCount++;
-      } catch (error) {
-        console.error('Upload error:', error);
+      } catch (err) {
         setError('Failed to upload one or more files. Please try again.');
-        setUploadedFiles(prev => 
-          prev.map(f => 
-            f.id === fileObj.id 
-              ? { ...f, status: 'error', error: (error as Error).message, documentStatus: 'failed' } 
-              : f
-          )
-        );
+        setUploadedFiles(prev => prev.map(f =>
+          f.id === fileObj.id ? { ...f, status: 'error', error: (err as Error).message, documentStatus: 'failed' as DocumentStatus } : f
+        ));
       }
     }));
-
-    // Show toast notification after all uploads complete
     if (successCount > 0) {
-      setToastMessage(`Documents uploaded successfully. They are currently being processed and will be in queue. Please check back later for status.`);
+      setToastMessage(`PDF(s) uploaded. Donor created/updated from filename. Processing in queue.`);
       setShowToast(true);
     }
-
     setIsUploading(false);
-  }, [donorId]);
+  }, []);
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({ 
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png']
-    },
+    accept: { 'application/pdf': ['.pdf'] },
     maxSize: MAX_FILE_SIZE,
-    disabled: isUploading || !donorId
+    disabled: isUploading
   });
 
 
@@ -191,21 +124,12 @@ export default function Upload() {
       setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
       return;
     }
-
     try {
       setError(null);
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/documents/${fileObj.stored_document_id}`,
-        {
-          method: 'DELETE',
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to delete document');
-
+      await apiService.deleteDocument(fileObj.stored_document_id);
       setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
-    } catch (error) {
-      console.error('Error deleting document:', error);
+    } catch (err) {
+      console.error('Error deleting document:', err);
       setError('Failed to delete document. Please try again.');
     }
   };
@@ -255,10 +179,10 @@ export default function Upload() {
           {...getRootProps()} 
           className={`border-2 border-dashed rounded-lg p-12 transition-colors duration-150 cursor-pointer bg-white
             ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-            ${isUploading || !donorId ? 'cursor-not-allowed opacity-50' : ''}
+            ${isUploading ? 'cursor-not-allowed opacity-50' : ''}
           `}
         >
-          <input {...getInputProps()} disabled={isUploading || !donorId} />
+          <input {...getInputProps()} disabled={isUploading} />
           <div className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -266,10 +190,10 @@ export default function Upload() {
               </div>
             </div>
             <p className="text-base font-semibold text-gray-900 mb-1">
-              {!donorId ? 'Please navigate from a donor page' : isDragActive ? 'Drop the files here' : 'Drag and drop files here'}
+              {isDragActive ? 'Drop PDFs here' : 'Drag and drop PDF files here'}
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              {!donorId ? 'Select a donor to enable file upload' : 'or click to select files from your computer'}
+              {donorId ? `Uploading for donor ${donor?.name ?? donorId}` : 'Donor will be created from filename (e.g. 0042510891 Section 1.pdf).'}
             </p>
             
             {/* File Type Buttons */}
@@ -278,10 +202,10 @@ export default function Upload() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isUploading && donorId) open();
+                  if (!isUploading) open();
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUploading || !donorId}
+                disabled={isUploading}
               >
                 <FileText className="w-4 h-4" />
                 PDF
@@ -290,10 +214,10 @@ export default function Upload() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isUploading && donorId) open();
+                  if (!isUploading) open();
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUploading || !donorId}
+                disabled={isUploading}
               >
                 <FileText className="w-4 h-4" />
                 DOC
@@ -302,10 +226,10 @@ export default function Upload() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isUploading && donorId) open();
+                  if (!isUploading) open();
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUploading || !donorId}
+                disabled={isUploading}
               >
                 <FileText className="w-4 h-4" />
                 DOCX
@@ -314,10 +238,10 @@ export default function Upload() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isUploading && donorId) open();
+                  if (!isUploading) open();
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUploading || !donorId}
+                disabled={isUploading}
               >
                 <ImageIcon className="w-4 h-4" />
                 JPG
@@ -326,10 +250,10 @@ export default function Upload() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isUploading && donorId) open();
+                  if (!isUploading) open();
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUploading || !donorId}
+                disabled={isUploading}
               >
                 <ImageIcon className="w-4 h-4" />
                 PNG

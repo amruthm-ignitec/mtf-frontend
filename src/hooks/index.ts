@@ -33,10 +33,10 @@ export const useDonors = () => {
     }
   }, []);
 
-  const updateDonor = useCallback(async (donorId: number, donorData: DonorUpdate) => {
+  const updateDonor = useCallback(async (donorId: string, donorData: DonorUpdate) => {
     try {
       const updatedDonor = await apiService.updateDonor(donorId, donorData);
-      setDonors(prev => prev.map(donor => 
+      setDonors(prev => prev.map(donor =>
         donor.id === donorId ? updatedDonor : donor
       ));
       return updatedDonor;
@@ -45,7 +45,7 @@ export const useDonors = () => {
     }
   }, []);
 
-  const deleteDonor = useCallback(async (donorId: number) => {
+  const deleteDonor = useCallback(async (donorId: string) => {
     try {
       await apiService.deleteDonor(donorId);
       setDonors(prev => prev.filter(donor => donor.id !== donorId));
@@ -54,10 +54,10 @@ export const useDonors = () => {
     }
   }, []);
 
-  const togglePriority = useCallback(async (donorId: number, currentPriority: boolean) => {
+  const togglePriority = useCallback(async (donorId: string, currentPriority: boolean) => {
     try {
       const updatedDonor = await apiService.updateDonorPriority(donorId, !currentPriority);
-      setDonors(prev => prev.map(donor => 
+      setDonors(prev => prev.map(donor =>
         donor.id === donorId ? updatedDonor : donor
       ));
       return updatedDonor;

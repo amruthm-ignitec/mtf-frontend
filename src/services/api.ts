@@ -4,7 +4,26 @@ import { DonorCreate, DonorUpdate, DonorResponse } from '../types/donor';
 import { ExtractionDataResponse } from '../types/extraction';
 import { DonorApprovalCreate, DonorApprovalResponse, PastDataResponse } from '../types/donorApproval';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+/** Backend list donor item (GET /donors/) */
+export interface DonorListItem {
+  id: string;
+  external_id: string;
+  name?: string;
+  age?: number | null;
+  eligibility_status: string;
+  flags: string[];
+}
+
+/** Backend donor detail (GET /donors/{id}) */
+export interface DonorDetailResponse {
+  id: string;
+  external_id: string;
+  merged_data: Record<string, unknown> | null;
+  eligibility_status: string;
+  flags: string[];
+}
 
 class ApiService {
   private baseURL: string;
@@ -22,35 +41,41 @@ class ApiService {
 
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
     };
+    if (config.body instanceof FormData) {
+      delete (config.headers as Record<string, string>)['Content-Type'];
+    } else if (typeof config.body === 'string' && !(config.headers as Record<string, string>)['Content-Type']) {
+      (config.headers as Record<string, string>)['Content-Type'] = 'application/json';
+    }
 
     try {
       const response = await fetch(url, config);
 
       if (!response.ok) {
-        const errorData: ApiError = await response.json();
-        
-        // If token is invalid, clear it from localStorage
-        if (response.status === 401 && errorData.message === "Could not validate credentials") {
-          this.removeToken();
-          // Redirect to login page
-          window.location.href = '/login';
+        let message = `HTTP ${response.status}`;
+        try {
+          const errorData: ApiError = await response.json();
+          message = errorData.message || message;
+          if (response.status === 401 && message === 'Could not validate credentials') {
+            this.removeToken();
+            window.location.href = '/login';
+          }
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
         }
-        
-        throw new Error(errorData.message || `HTTP ${response.status}`);
+        throw new Error(message);
       }
 
+      if (response.status === 204) return undefined as T;
       return await response.json();
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
+      if (error instanceof Error) throw error;
       throw new Error('Network error occurred');
     }
   }
@@ -114,184 +139,167 @@ class ApiService {
     }
   }
 
-  // Donor management methods
+  // Donor management methods (POC: id is string UUID)
   async getDonors(skip: number = 0, limit: number = 100): Promise<DonorResponse[]> {
-    return this.request<DonorResponse[]>(`/donors/?skip=${skip}&limit=${limit}`);
+    const list = await this.request<DonorListItem[]>(`/donors/?skip=${skip}&limit=${limit}`);
+    return list.map((d) => ({
+      id: d.id,
+      unique_donor_id: d.external_id,
+      name: d.name ?? `Donor ${d.external_id}`,
+      age: d.age ?? undefined,
+      gender: '',
+      is_priority: false,
+      created_at: '',
+    }));
   }
 
-  async getDonor(donorId: number): Promise<DonorResponse> {
-    return this.request<DonorResponse>(`/donors/${donorId}`);
+  async getDonor(donorId: string): Promise<DonorDetailResponse> {
+    return this.request<DonorDetailResponse>(`/donors/${donorId}`);
   }
 
-  async createDonor(donor: DonorCreate): Promise<DonorResponse> {
-    return this.request<DonorResponse>('/donors/', {
-      method: 'POST',
-      body: JSON.stringify(donor),
-    });
+  async createDonor(_donor: DonorCreate): Promise<DonorResponse> {
+    throw new Error('Not available in POC');
   }
 
-  async updateDonor(donorId: number, donor: DonorUpdate): Promise<DonorResponse> {
-    return this.request<DonorResponse>(`/donors/${donorId}`, {
-      method: 'PUT',
-      body: JSON.stringify(donor),
-    });
+  async updateDonor(_donorId: string, _donor: DonorUpdate): Promise<DonorResponse> {
+    throw new Error('Not available in POC');
   }
 
-  async deleteDonor(donorId: number): Promise<void> {
-    return this.request<void>(`/donors/${donorId}`, {
-      method: 'DELETE',
-    });
+  async deleteDonor(_donorId: string): Promise<void> {
+    throw new Error('Not available in POC');
   }
 
-  async updateDonorPriority(donorId: number, isPriority: boolean): Promise<DonorResponse> {
-    return this.request<DonorResponse>(`/donors/${donorId}/priority`, {
-      method: 'PUT',
-      body: JSON.stringify({ is_priority: isPriority }),
-    });
+  async updateDonorPriority(_donorId: string, _isPriority: boolean): Promise<DonorResponse> {
+    throw new Error('Not available in POC');
   }
 
-  // Document management methods
-  async getDonorDocuments(donorId: number): Promise<unknown[]> {
+  // Document management methods (POC: ids are string UUIDs)
+  async getDonorDocuments(donorId: string): Promise<unknown[]> {
     return this.request<unknown[]>(`/documents/donor/${donorId}`);
   }
 
-  async getDocumentStatus(documentId: number): Promise<unknown> {
+  async getDocumentStatus(documentId: string): Promise<unknown> {
     return this.request<unknown>(`/documents/${documentId}/status`);
   }
 
-  async getDocumentSasUrl(documentId: number, expiryMinutes: number = 30): Promise<{ sas_url: string; expiry_minutes: number; original_filename: string }> {
-    return this.request<{ sas_url: string; expiry_minutes: number; original_filename: string }>(`/documents/${documentId}/sas-url?expiry_minutes=${expiryMinutes}`);
-  }
-
-  /**
-   * Get the proxied PDF URL for a document.
-   * This endpoint streams the PDF from Azure Blob Storage with proper CORS headers,
-   * avoiding CORS issues when loading in PDF.js.
-   */
-  getDocumentPdfUrl(documentId: number): string {
-    const token = localStorage.getItem('authToken');
+  getDocumentPdfUrl(documentId: string): string {
     return `${this.baseURL}/documents/${documentId}/pdf`;
   }
 
-  async deleteDocument(documentId: number): Promise<void> {
-    return this.request<void>(`/documents/${documentId}`, {
-      method: 'DELETE',
+  async deleteDocument(documentId: string): Promise<void> {
+    await this.request<void>(`/documents/${documentId}`, { method: 'DELETE' });
+  }
+
+  /** POC: Upload PDF; backend creates donor from filename. Returns document_id and donor_id (UUIDs). */
+  async uploadDocument(file: File): Promise<{ document_id: string; donor_id: string; status: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.request<{ document_id: string; donor_id: string; status: string }>('/upload', {
+      method: 'POST',
+      body: form,
     });
   }
 
-  // Extraction data methods
-  async getDonorExtractionData(donorId: number): Promise<ExtractionDataResponse> {
-    return this.request<ExtractionDataResponse>(`/donors/${donorId}/extraction-data`);
+  // Extraction: map GET /donors/{id} (merged_data + eligibility_status + flags) to ExtractionDataResponse
+  async getDonorExtractionData(donorId: string): Promise<ExtractionDataResponse> {
+    const d = await this.getDonor(donorId);
+    const merged = (d.merged_data || {}) as Record<string, unknown>;
+    const identity = (merged.Identity || {}) as Record<string, unknown>;
+    return {
+      donor_id: d.external_id || d.id,
+      case_id: d.id,
+      processing_timestamp: new Date().toISOString(),
+      processing_duration_seconds: 0,
+      extracted_data: merged as any,
+      eligibility: {
+        musculoskeletal: {
+          status: d.eligibility_status,
+          blocking_criteria: (d.flags || []).map((f) => ({ criterion_name: f, reasoning: f })),
+          md_discretion_criteria: [],
+        },
+      },
+      criteria_evaluations: {},
+    };
   }
 
-  async getDonorEligibility(donorId: number): Promise<{
+  async getDonorEligibility(donorId: string): Promise<{
     donor_id: string;
-    eligibility: {
-      musculoskeletal?: {
-        status: string;
-        blocking_criteria: any[];
-        md_discretion_criteria: any[];
-        evaluated_at?: string;
-      };
-      skin?: {
-        status: string;
-        blocking_criteria: any[];
-        md_discretion_criteria: any[];
-        evaluated_at?: string;
-      };
-    };
+    eligibility: { musculoskeletal?: { status: string; blocking_criteria: any[]; md_discretion_criteria: any[] }; skin?: { status: string; blocking_criteria: any[]; md_discretion_criteria: any[] } };
     criteria_evaluations: Record<string, any>;
   }> {
-    return this.request(`/donors/${donorId}/eligibility`);
+    const d = await this.getDonor(donorId);
+    return {
+      donor_id: d.id,
+      eligibility: {
+        musculoskeletal: { status: d.eligibility_status, blocking_criteria: (d.flags || []).map((f) => ({ criterion_name: f })), md_discretion_criteria: [] },
+      },
+      criteria_evaluations: {},
+    };
   }
 
   async getQueueDetails(): Promise<any[]> {
     return this.request<any[]>('/donors/queue/details');
   }
 
-  // User management methods (Admin only)
+  // POC stubs: User management
   async getUsers(): Promise<User[]> {
-    return this.request<User[]>('/users');
+    return [];
   }
 
-  async getUser(userId: number): Promise<User> {
-    return this.request<User>(`/users/${userId}`);
+  async getUser(_userId: number): Promise<User> {
+    throw new Error('Not available in POC');
   }
 
-  async createUser(userData: UserCreate): Promise<User> {
-    return this.request<User>('/users', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
+  async createUser(_userData: UserCreate): Promise<User> {
+    throw new Error('Not available in POC');
   }
 
-  async updateUser(userId: number, userData: UserUpdate): Promise<User> {
-    return this.request<User>(`/users/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
+  async updateUser(_userId: number, _userData: UserUpdate): Promise<User> {
+    throw new Error('Not available in POC');
   }
 
-  async deleteUser(userId: number): Promise<void> {
-    return this.request<void>(`/users/${userId}`, {
-      method: 'DELETE',
-    });
+  async deleteUser(_userId: number): Promise<void> {
+    throw new Error('Not available in POC');
   }
 
-  // Settings management methods (Admin only)
   async getSettings(): Promise<Record<string, string | null>> {
-    return this.request<Record<string, string | null>>('/settings');
+    return {};
   }
 
-  async updateSettings(settings: Record<string, string | null>): Promise<Record<string, string | null>> {
-    return this.request<Record<string, string | null>>('/settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    });
+  async updateSettings(_settings: Record<string, string | null>): Promise<Record<string, string | null>> {
+    return {};
   }
 
-  // Donor Approval/Rejection methods (Medical Director only)
-  async createDonorApproval(approval: DonorApprovalCreate): Promise<DonorApprovalResponse> {
-    return this.request<DonorApprovalResponse>('/donor-approvals/', {
-      method: 'POST',
-      body: JSON.stringify(approval),
-    });
+  async createDonorApproval(_approval: DonorApprovalCreate): Promise<DonorApprovalResponse> {
+    throw new Error('Not available in POC');
   }
 
-  async getDonorApprovals(donorId: number): Promise<DonorApprovalResponse[]> {
-    return this.request<DonorApprovalResponse[]>(`/donor-approvals/donor/${donorId}`);
+  async getDonorApprovals(_donorId: string): Promise<DonorApprovalResponse[]> {
+    return [];
   }
 
-  async getDonorPastData(donorId: number): Promise<PastDataResponse> {
-    return this.request<PastDataResponse>(`/donor-approvals/donor/${donorId}/past-data`);
+  async getDonorPastData(_donorId: string): Promise<PastDataResponse> {
+    return {} as PastDataResponse;
   }
 
-  async getApproval(approvalId: number): Promise<DonorApprovalResponse> {
-    return this.request<DonorApprovalResponse>(`/donor-approvals/${approvalId}`);
+  async getApproval(_approvalId: number): Promise<DonorApprovalResponse> {
+    throw new Error('Not available in POC');
   }
 
-  // Platform Feedback methods
   async getFeedbacks(): Promise<Array<{ id: number; username: string; feedback: string; created_at: string }>> {
-    return this.request<Array<{ id: number; username: string; feedback: string; created_at: string }>>('/feedback');
+    return [];
   }
 
-  async createFeedback(text: string): Promise<{ id: number; username: string; feedback: string; created_at: string }> {
-    return this.request<{ id: number; username: string; feedback: string; created_at: string }>('/feedback', {
-      method: 'POST',
-      body: JSON.stringify({ text }),
-    });
+  async createFeedback(_text: string): Promise<{ id: number; username: string; feedback: string; created_at: string }> {
+    throw new Error('Not available in POC');
   }
 
-  // Donor Feedback methods
-  async getDonorFeedbacks(donorId: number): Promise<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>> {
-    return this.request<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>>(`/donors/${donorId}/feedback`);
+  async getDonorFeedbacks(_donorId: string): Promise<Array<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>> {
+    return [];
   }
 
-  async createDonorFeedback(donorId: number, text: string): Promise<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }> {
-    return this.request<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }>(`/donors/${donorId}/feedback`, {
-      method: 'POST',
-      body: JSON.stringify({ text }),
-    });
+  async createDonorFeedback(_donorId: string, _text: string): Promise<{ id: number; donor_id: number; username: string; feedback: string; created_at: string }> {
+    throw new Error('Not available in POC');
   }
 }
 

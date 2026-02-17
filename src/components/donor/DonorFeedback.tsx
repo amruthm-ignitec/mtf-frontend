@@ -4,7 +4,7 @@ import { apiService } from '../../services/api';
 import { DonorFeedback as DonorFeedbackType } from '../../types/donor_feedback';
 
 interface DonorFeedbackProps {
-  donorId: number;
+  donorId: string;
 }
 
 export default function DonorFeedback({ donorId }: DonorFeedbackProps) {
@@ -23,7 +23,6 @@ export default function DonorFeedback({ donorId }: DonorFeedbackProps) {
 
   const fetchFeedbacks = async () => {
     if (!donorId) return;
-    
     try {
       setIsLoading(true);
       const data = await apiService.getDonorFeedbacks(donorId);

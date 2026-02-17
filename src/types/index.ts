@@ -118,3 +118,22 @@ export interface ReviewNote {
   status: 'Open' | 'Resolved';
   priority: 'Low' | 'Medium' | 'High';
 }
+
+export interface DonorRecord {
+  id: string | number;
+  donorName: string;
+  name?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  causeOfDeath?: string | null;
+  uploadTimestamp?: string;
+  requiredDocuments?: Array<{ id: string; name: string; status: string; [key: string]: unknown }>;
+  criticalFindings?: FindingSummary[];
+}
+
+export interface MDSummarySection {
+  id: string;
+  title: string;
+  content: string;
+  [key: string]: unknown;
+}

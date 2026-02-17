@@ -17,8 +17,10 @@ export default function EligibilityStatusSection({ eligibility }: EligibilitySta
       case 'eligible':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'ineligible':
-        return <XCircle className="h-5 w-5 text-red-600" />;
+      case 'review':
+        return <AlertCircle className="h-5 w-5 text-yellow-600" />;
       case 'requires_review':
+      case 'pending':
         return <AlertCircle className="h-5 w-5 text-yellow-600" />;
       default:
         return null;
@@ -30,9 +32,11 @@ export default function EligibilityStatusSection({ eligibility }: EligibilitySta
       case 'eligible':
         return 'bg-green-100 text-green-700 border-green-200';
       case 'ineligible':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'requires_review':
+      case 'review':
         return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'requires_review':
+      case 'pending':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200';
     }

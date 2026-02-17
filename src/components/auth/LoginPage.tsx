@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDefaultRouteForRole } from './roleRouting';
@@ -6,14 +6,21 @@ import { getDefaultRouteForRole } from './roleRouting';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const from = location.state?.from?.pathname;
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname;
+
+  // POC: redirect if already "authenticated" (mock user)
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate(from || '/donors', { replace: true });
+    }
+  }, [isLoading, isAuthenticated, navigate, from]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +116,15 @@ export default function LoginPage() {
               ) : (
                 'Sign in'
               )}
+            </button>
+
+            <p className="text-center text-sm text-gray-500">POC: No auth required</p>
+            <button
+              type="button"
+              onClick={() => navigate('/donors', { replace: true })}
+              className="w-full py-2 text-sm text-blue-600 hover:text-blue-800"
+            >
+              Continue as guest →
             </button>
           </form>
         </div>

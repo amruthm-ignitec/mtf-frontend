@@ -1,6 +1,6 @@
-// Donor types matching the backend API
+// Donor types matching the backend API (POC: id is UUID string)
 export interface Donor extends Record<string, unknown> {
-  id: number;
+  id: string;
   unique_donor_id: string;
   name: string;
   age?: number;
