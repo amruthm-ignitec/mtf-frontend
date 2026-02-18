@@ -20,7 +20,7 @@ export default function PastDataSection({ data, loading }: PastDataSectionProps)
     );
   }
 
-  if (!data || data.past_decisions.length === 0) {
+  if (!data || !Array.isArray(data.past_decisions) || data.past_decisions.length === 0) {
     return (
       <Card className="p-6">
         <div className="flex items-center space-x-2 mb-4">
