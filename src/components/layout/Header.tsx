@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users, MessageSquare } from 'lucide-react';
+import { User, Settings, HelpCircle, LogOut, ChevronDown, Bell, Users } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationDropdown from '../notifications/NotificationDropdown';

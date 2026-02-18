@@ -342,6 +342,23 @@ export default function Documents() {
                 Managing documents for <span className="font-medium">{donor.name}</span> (ID: {donor.unique_donor_id})
               </p>
             )}
+            {/* Donor page tabs: Documents | Summary */}
+            {donorId && (
+              <div className="flex border-b border-gray-200 mt-4 -mb-px">
+                <span className="px-4 py-2 border-b-2 border-blue-600 text-sm font-medium text-blue-600">
+                  Documents
+                </span>
+                {canViewSummary && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/summary/${donorId}`, { state: { donor } })}
+                    className="px-4 py-2 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  >
+                    Summary
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex space-x-3">
             <Button
@@ -352,32 +369,21 @@ export default function Documents() {
             >
               Refresh
             </Button>
-            {/* Show View Summary button only for roles allowed to view summary and if there are completed documents */}
-            {canViewSummary && documents.some(doc => doc.status === 'completed') && donorId && (
-              <Button
-                onClick={() => {
-                  if (!donorId) {
-                    console.error('Donor ID is missing');
-                    alert('Donor ID is missing. Cannot navigate to summary.');
-                    return;
-                  }
-                  console.log('Navigating to summary with donorId:', donorId, 'and donor:', donor);
-                  navigate(`/summary/${donorId}`, {
-                    state: { donor: donor }
-                  });
-                }}
-                variant="primary"
-                icon={<FileSearch className="w-4 h-4" />}
-              >
-                View Summary
-              </Button>
-            )}
             <Button
               onClick={() => navigate(`/upload/${donorId}`)}
               icon={<Upload className="w-4 h-4" />}
             >
               Upload Document
             </Button>
+            {canViewSummary && donorId && (
+              <Button
+                onClick={() => navigate(`/summary/${donorId}`, { state: { donor } })}
+                variant="primary"
+                icon={<FileSearch className="w-4 h-4" />}
+              >
+                Summary
+              </Button>
+            )}
           </div>
         </div>
       </div>
