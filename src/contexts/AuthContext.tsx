@@ -5,7 +5,7 @@ const MOCK_USER: User = {
   id: 1,
   email: 'poc@local',
   full_name: 'POC User',
-  role: 'doc_uploader',
+  role: 'admin',
   is_active: true,
   created_at: new Date().toISOString(),
 };

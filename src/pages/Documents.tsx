@@ -47,7 +47,8 @@ export default function Documents() {
   const { donorId } = useParams<{ donorId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const canViewSummary = user?.role === 'admin' || user?.role === 'medical_director';
+  /* Summary (merged_data) visible to all authenticated users for POC */
+  const canViewSummary = true;
   const [donor, setDonor] = useState<Donor | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -258,7 +259,7 @@ export default function Documents() {
       className: 'text-right',
       render: (doc: Document) => (
         <div className="flex justify-end space-x-2">
-          {doc.status === 'completed' && canViewSummary && (
+          {doc.status === 'completed' && (
             <button
               onClick={(e) => {
                 e.stopPropagation();

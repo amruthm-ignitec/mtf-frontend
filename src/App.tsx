@@ -37,8 +37,8 @@ function App() {
                     <Route path="/donors" element={<DonorManagement />} />
                     <Route path="/documents/:donorId" element={<Documents />} />
                     <Route path="/queue" element={<Queue />} />
-                    {/* Only Admin and Medical Director can access donor summary */}
-                    <Route path="/summary/:id" element={<MedicalDirectorRoute><Summary /></MedicalDirectorRoute>} />
+                    {/* Donor summary (merged_data) visible to all authenticated users for POC */}
+                    <Route path="/summary/:id" element={<Summary />} />
                     <Route path="/upload/:donorId?" element={<DocUploaderRoute><Upload /></DocUploaderRoute>} />
                     <Route path="/intelligence" element={<MedicalDirectorRoute><Intelligence /></MedicalDirectorRoute>} />
                     <Route path="/profile" element={<Profile />} />
