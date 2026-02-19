@@ -1576,7 +1576,7 @@ export default function Summary() {
             </Card>
           );
         }
-        return <DRAISection data={draiData} documents={documents} onCitationClick={handleCitationClick} />;
+        return <DRAISection data={draiData} documents={documents} onCitationClick={handleCitationClick} donorId={id} />;
 
       case 'infectious-disease':
         // Show infectious disease tab if we have any related data
