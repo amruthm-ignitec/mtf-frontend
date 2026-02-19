@@ -1564,18 +1564,9 @@ export default function Summary() {
 
 
       case 'drai':
-        // Try both keys - backend uses donor_risk_assessment_interview, types use drai
+        // Try both keys - backend uses donor_risk_assessment_interview, types use drai.
+        // DRAISection shows mock UI when no data; pass real data when available for future use.
         const draiData = extractionData?.extracted_data?.donor_risk_assessment_interview || extractionData?.extracted_data?.drai;
-        if (!draiData) {
-          return (
-            <Card className="p-6">
-              <div className="text-center py-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Donor Risk Assessment Interview (DRAI)</h2>
-                <p className="text-sm text-gray-500">No DRAI data available for this donor.</p>
-              </div>
-            </Card>
-          );
-        }
         return <DRAISection data={draiData} documents={documents} onCitationClick={handleCitationClick} donorId={id} />;
 
       case 'infectious-disease':
