@@ -4,7 +4,7 @@ import { FindingSummary, DonorRecord, MDSummarySection, ExtractionDataResponse }
 import { ApprovalStatus, ApprovalType, PastDataResponse } from '../types/donorApproval';
 // import { getMockMDSections } from '../services/mockData';
 // ClinicalInformation and FindingsSection components moved inline
-import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight, UserCheck, FlaskConical, Package, Shield, FileSearch, Droplets, XCircle, History, ArrowLeft } from 'lucide-react';
+import { Clock, Heart, AlertCircle, FileText, Stethoscope, Brain, CheckCircle, Layout, FileCheck, User, AlertTriangle, ChevronRight, UserCheck, FlaskConical, Package, Shield, FileSearch, Droplets, XCircle, History, ArrowLeft, Sparkles } from 'lucide-react';
 import FindingDetailsModal from '../components/modals/FindingDetailsModal';
 import ApprovalRejectionModal from '../components/modals/ApprovalRejectionModal';
 import { apiService } from '../services/api';
@@ -51,6 +51,39 @@ const getCauseOfDeathFromExtraction = (
   }
 
   return null;
+};
+
+// AI Insights / Clinical Summary (from extraction or sample)
+export interface ClinicalSummarySocialHistory {
+  Drug_Use?: string;
+  Alcohol_Use?: string;
+  Smoking_History?: string;
+  Source_Page?: number;
+}
+
+export interface ClinicalSummaryData {
+  Cause_Of_Death?: string;
+  Social_History?: ClinicalSummarySocialHistory;
+  Infection_Markers?: string[];
+  Admitting_Diagnosis?: string;
+  Past_Medical_History?: string[];
+  Hospital_Course_Summary?: string;
+  Medications_Administered?: string[];
+}
+
+const SAMPLE_CLINICAL_SUMMARY: ClinicalSummaryData = {
+  Cause_Of_Death: 'Sudden Cardiac Arrest',
+  Social_History: {
+    Drug_Use: 'Yes, used marijuana for 30 years and cocaine for 10 years, last used 5-10 years ago',
+    Alcohol_Use: 'Yes, drank alcohol 3x a week for 40 years',
+    Source_Page: 53,
+    Smoking_History: 'Yes, smoked cigarettes for 15 years, quit 5 years ago',
+  },
+  Infection_Markers: [],
+  Admitting_Diagnosis: 'Cardiac Arrest',
+  Past_Medical_History: ['Heart Attack', 'Diabetes', 'Hypertension', 'Kidney Disease'],
+  Hospital_Course_Summary: "Witnessed arrest at grandson's basketball game. Chest pain led to ER visit. Bradyed down and arrested in triage room. ACLS meds given, asystole and pronounced.",
+  Medications_Administered: ['Medications for high blood pressure and diabetes', 'Insulin'],
 };
 
 // Inline components
@@ -472,6 +505,109 @@ export default function Summary() {
                 )}
               </div>
             )}
+
+            {/* AI Insights */}
+            {(() => {
+              const raw = (extractionData?.extracted_data as Record<string, unknown> | undefined)?.Clinical_Summary
+                ?? (extractionData?.extracted_data as Record<string, unknown> | undefined)?.clinical_summary;
+              const clinicalSummary: ClinicalSummaryData = (raw && typeof raw === 'object')
+                ? (raw as ClinicalSummaryData)
+                : SAMPLE_CLINICAL_SUMMARY;
+              const sh = clinicalSummary.Social_History;
+              return (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Sparkles className="h-5 w-5 mr-2 text-blue-600" />
+                    AI Insights
+                  </h3>
+                  <div className="space-y-4">
+                    {clinicalSummary.Cause_Of_Death && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cause of Death</label>
+                        <p className="text-sm text-gray-900 mt-0.5">{clinicalSummary.Cause_Of_Death}</p>
+                      </div>
+                    )}
+                    {clinicalSummary.Admitting_Diagnosis && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Admitting Diagnosis</label>
+                        <p className="text-sm text-gray-900 mt-0.5">{clinicalSummary.Admitting_Diagnosis}</p>
+                      </div>
+                    )}
+                    {clinicalSummary.Hospital_Course_Summary && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Hospital Course Summary</label>
+                        <p className="text-sm text-gray-900 mt-0.5">{clinicalSummary.Hospital_Course_Summary}</p>
+                      </div>
+                    )}
+                    {Array.isArray(clinicalSummary.Past_Medical_History) && clinicalSummary.Past_Medical_History.length > 0 && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Past Medical History</label>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {clinicalSummary.Past_Medical_History.map((item, i) => (
+                            <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {Array.isArray(clinicalSummary.Medications_Administered) && clinicalSummary.Medications_Administered.length > 0 && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Medications Administered</label>
+                        <ul className="mt-1 list-disc list-inside text-sm text-gray-900 space-y-0.5">
+                          {clinicalSummary.Medications_Administered.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {sh && (sh.Drug_Use || sh.Alcohol_Use || sh.Smoking_History) && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Social History</label>
+                        <div className="mt-2 space-y-2">
+                          {sh.Drug_Use && (
+                            <div>
+                              <span className="text-xs text-gray-500">Drug use: </span>
+                              <span className="text-sm text-gray-900">{sh.Drug_Use}</span>
+                            </div>
+                          )}
+                          {sh.Alcohol_Use && (
+                            <div>
+                              <span className="text-xs text-gray-500">Alcohol use: </span>
+                              <span className="text-sm text-gray-900">{sh.Alcohol_Use}</span>
+                            </div>
+                          )}
+                          {sh.Smoking_History && (
+                            <div>
+                              <span className="text-xs text-gray-500">Smoking: </span>
+                              <span className="text-sm text-gray-900">{sh.Smoking_History}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {Array.isArray(clinicalSummary.Infection_Markers) && clinicalSummary.Infection_Markers.length > 0 && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Infection Markers</label>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {clinicalSummary.Infection_Markers.map((item, i) => (
+                            <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {Array.isArray(clinicalSummary.Infection_Markers) && clinicalSummary.Infection_Markers.length === 0 && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Infection Markers</label>
+                        <p className="text-sm text-gray-500 mt-0.5">None reported</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Required Documentation */}
             {donor && extractionData && (() => {
