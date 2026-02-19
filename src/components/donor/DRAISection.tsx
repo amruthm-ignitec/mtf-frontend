@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
+import { Droplets, Radiation, Plane, Pill, Stethoscope, FileText } from "lucide-react";
 import { Document } from "../../utils/documentUtils";
 
 // ─── Mock data for DRAI tab (dummy / mock tab) ─────────────────────────────────
-const FIELDS = [
+const FIELDS: DraiField[] = [
   {
     id: 1,
     question: "2. Previous blood transfusion in last 12 months?",
     answer: "No",
     nested: false,
+    section: "transfusion",
     sourceSnippet:
       "Q2: Have you received a blood transfusion in the past 12 months?\n[X] No   [ ] Yes\nIf yes, specify date: ______",
     sourcePage: 3,
@@ -17,6 +19,7 @@ const FIELDS = [
     question: "3. Exposure to toxic substances or radiation?",
     answer: "No known exposure reported",
     nested: false,
+    section: "exposure",
     sourceSnippet:
       "Section 3 — Occupational / Environmental Exposure\nToxic substances or ionising radiation:  [X] None reported\nDetails: N/A",
     sourcePage: 4,
@@ -26,6 +29,7 @@ const FIELDS = [
     question: "4a. Recent travel outside country of residence?",
     answer: "Yes — Europe (vacation)",
     nested: false,
+    section: "travel",
     sourceSnippet:
       "4a. International travel in last 6 months?\n[ ] No  [X] Yes\nDestination(s): Europe (vacation)\nDuration: 14 days",
     sourcePage: 4,
@@ -35,6 +39,7 @@ const FIELDS = [
     question: "↳ 4a(i). When was last visit? Duration?",
     answer: "June 2024 — approx. 2 wks",
     nested: true,
+    section: "travel",
     sourceSnippet:
       "4a(i). [Handwritten — partially legible]\n\"June [?] 2024  ~2 wee[ks?]\"\nNote: ink smear over day value",
     sourcePage: 4,
@@ -44,6 +49,7 @@ const FIELDS = [
     question: "5. Current or recent medications (last 4 weeks)?",
     answer: "None",
     nested: false,
+    section: "medications",
     sourceSnippet:
       "Section 5 — Medications\nAre you currently taking any prescription or over-the-counter medications?\n[X] No   [ ] Yes\nIf yes, list: ________________",
     sourcePage: 5,
@@ -53,6 +59,7 @@ const FIELDS = [
     question: "6. History of hepatitis or jaundice?",
     answer: "No",
     nested: false,
+    section: "health",
     sourceSnippet:
       "6. Have you ever had hepatitis or jaundice (yellowing of skin/eyes)?\n[ ] Yes   [X] No\nIf yes, type and date: ______",
     sourcePage: 5,
@@ -62,6 +69,7 @@ const FIELDS = [
     question: "7. Tattoo, piercing, or acupuncture in last 12 months?",
     answer: "No",
     nested: false,
+    section: "health",
     sourceSnippet:
       "7. In the past 12 months have you had a tattoo, piercing, or acupuncture?\n[X] No   [ ] Yes\nDate(s) if yes: ______",
     sourcePage: 6,
@@ -71,6 +79,7 @@ const FIELDS = [
     question: "8. Sexual behaviour / high-risk exposure?",
     answer: "No high-risk exposure",
     nested: false,
+    section: "health",
     sourceSnippet:
       "Section 8 — Sexual Health\nAny high-risk sexual exposure in last 12 months?\n[ ] Yes   [X] No\nDeclaration signed: ________",
     sourcePage: 6,
@@ -80,6 +89,7 @@ const FIELDS = [
     question: "↳ 8(i). Last sexual contact date (if applicable)?",
     answer: "N/A",
     nested: true,
+    section: "health",
     sourceSnippet:
       "8(i). [Not applicable — donor selected No above]\nField left blank.",
     sourcePage: 6,
@@ -89,19 +99,54 @@ const FIELDS = [
     question: "9. Ever tested positive for HIV, HBV, HCV, or HTLV?",
     answer: "No",
     nested: false,
+    section: "health",
     sourceSnippet:
       "9. Have you ever tested positive for HIV, Hepatitis B, Hepatitis C, or HTLV?\n[ ] Yes   [X] No",
     sourcePage: 7,
   },
 ];
 
+const SECTION_CONFIG: Record<string, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
+  transfusion: { label: "Transfusion & exposure", Icon: Droplets },
+  exposure: { label: "Transfusion & exposure", Icon: Radiation },
+  travel: { label: "Travel", Icon: Plane },
+  medications: { label: "Medications", Icon: Pill },
+  health: { label: "Health & risk", Icon: Stethoscope },
+};
+
 interface DraiField {
   id: number;
   question: string;
   answer: string;
   nested: boolean;
+  section: string;
   sourceSnippet: string;
   sourcePage: number;
+}
+
+// Group fields by section (merge transfusion + exposure into one)
+function groupBySection(fields: DraiField[]): { title: string; Icon: React.ComponentType<{ className?: string }>; fields: DraiField[] }[] {
+  const map = new Map<string, DraiField[]>();
+  for (const f of fields) {
+    const config = SECTION_CONFIG[f.section] || { label: "Other", Icon: FileText };
+    const key = config.label;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(f);
+  }
+  const order = ["Transfusion & exposure", "Travel", "Medications", "Health & risk", "Other"];
+  return order.filter((title) => map.has(title)).map((title) => {
+    const firstKey = Object.keys(SECTION_CONFIG).find((k) => SECTION_CONFIG[k].label === title);
+    return {
+      title,
+      Icon: firstKey ? SECTION_CONFIG[firstKey].Icon : FileText,
+      fields: map.get(title)!,
+    };
+  });
+}
+
+function isLowRisk(answer: string): boolean {
+  const a = answer.toLowerCase();
+  return a === "no" || a === "none" || a === "n/a" || a.startsWith("no ") || a.includes("no known") || a.includes("no high-risk");
 }
 
 // ─── Citation Popover (light theme) ──────────────────────────────────────────
@@ -207,37 +252,34 @@ function SourceButton({
 
 function DataRow({
   field,
-  index,
   onCitationClick,
 }: {
   field: DraiField;
-  index: number;
   onCitationClick?: (documentName: string, pageNumber?: number) => void;
 }) {
   const handleViewFullPage = () => {
     onCitationClick?.("UDRAI — Donor Risk Assessment Interview", field.sourcePage);
   };
+  const lowRisk = isLowRisk(field.answer);
 
   return (
     <div
-      className={`flex gap-6 items-start py-5 px-6 border-b border-gray-100 last:border-b-0 transition-colors hover:bg-gray-50/80 ${
-        index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+      className={`flex gap-4 items-start py-4 px-4 rounded-lg transition-colors hover:bg-gray-50/80 ${
+        field.nested ? "ml-4 pl-4 border-l-2 border-gray-200" : ""
       }`}
     >
-      <div className="flex-shrink-0 w-5 flex justify-center pt-0.5">
-        {field.nested && (
-          <div className="w-px min-h-[2.5rem] bg-gray-200 rounded" aria-hidden />
-        )}
+      <div
+        className={`flex-shrink-0 w-1 rounded-full min-h-[2rem] ${
+          lowRisk ? "bg-emerald-400" : "bg-amber-400"
+        }`}
+        title={lowRisk ? "Low risk" : "Review"}
+        aria-hidden
+      />
+      <div className="flex-1 min-w-0 space-y-1">
+        <p className="text-xs text-gray-500 leading-snug">{field.question}</p>
+        <p className="text-sm font-semibold text-gray-900 leading-snug">{field.answer}</p>
       </div>
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <p className="text-sm text-gray-500 leading-snug">
-          {field.question}
-        </p>
-        <p className="text-base font-medium text-gray-900 leading-relaxed">
-          {field.answer}
-        </p>
-      </div>
-      <div className="flex-shrink-0 pt-0.5">
+      <div className="flex-shrink-0">
         <SourceButton
           snippet={field.sourceSnippet}
           page={field.sourcePage}
@@ -256,6 +298,36 @@ export interface DRAISectionProps {
   donorId?: string;
 }
 
+// Quick-view chips for at-a-glance analysis
+function QuickSummary({ fields }: { fields: DraiField[] }) {
+  const transfusion = fields.find((f) => f.question.includes("blood transfusion"));
+  const travel = fields.find((f) => f.section === "travel" && !f.nested);
+  const medications = fields.find((f) => f.section === "medications");
+  const items = [
+    transfusion && { label: "Transfusion", value: transfusion.answer, low: isLowRisk(transfusion.answer) },
+    travel && { label: "Travel", value: travel.answer, low: isLowRisk(travel.answer) },
+    medications && { label: "Medications", value: medications.answer, low: isLowRisk(medications.answer) },
+  ].filter(Boolean) as { label: string; value: string; low: boolean }[];
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map(({ label, value, low }) => (
+        <span
+          key={label}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+            low
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              : "bg-amber-50 text-amber-800 border border-amber-200"
+          }`}
+        >
+          <span className="text-gray-500">{label}:</span>
+          <span className="max-w-[140px] truncate" title={value}>{value}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function DRAISection({
   data: _data,
   documents: _documents = [],
@@ -263,36 +335,50 @@ export default function DRAISection({
   donorId,
 }: DRAISectionProps) {
   const donorDisplayId = donorId || "#81028";
+  const sections = groupBySection(FIELDS);
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-visible">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
       <div className="px-6 pt-5 pb-4 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-          Donor Risk Assessment Interview (DRAI)
-        </h3>
-        <p className="text-sm text-gray-500">
-          Donor ID: {donorDisplayId}
-          <span className="mx-2 text-gray-300">·</span>
-          <span className="text-blue-600 font-medium">UDRAI</span>
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Donor Risk Assessment Interview (DRAI)
+            </h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Donor ID: {donorDisplayId}
+              <span className="mx-2 text-gray-300">·</span>
+              <span className="text-blue-600 font-medium">UDRAI</span>
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">Quick view</p>
+          <QuickSummary fields={FIELDS} />
+        </div>
       </div>
 
-      <div className="flex gap-6 px-6 py-2.5 border-b border-gray-200 bg-gray-50/80 text-[11px] text-gray-500 uppercase tracking-wider font-medium">
-        <div className="w-5 flex-shrink-0" />
-        <div className="flex-1 min-w-0">Question & answer</div>
-        <div className="flex-shrink-0 w-[26px] text-center">Source</div>
-      </div>
-
-      <div>
-        {FIELDS.map((field, i) => (
-          <DataRow
-            key={field.id}
-            field={field}
-            index={i}
-            onCitationClick={(docName, pageNum) =>
-              onCitationClick?.(docName, pageNum, undefined)
-            }
-          />
+      <div className="p-4 space-y-6">
+        {sections.map(({ title, Icon, fields: sectionFields }) => (
+          <section key={title} className="rounded-xl border border-gray-100 bg-gray-50/40 overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100 bg-white/80">
+              <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Icon className="w-4 h-4 text-gray-500" />
+                {title}
+              </h4>
+            </div>
+            <div className="divide-y divide-gray-100/80">
+              {sectionFields.map((field) => (
+                <DataRow
+                  key={field.id}
+                  field={field}
+                  onCitationClick={(docName, pageNum) =>
+                    onCitationClick?.(docName, pageNum, undefined)
+                  }
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </div>
