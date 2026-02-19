@@ -117,7 +117,7 @@ interface DraiField {
 
 const isHigh = (c: number) => c >= 95;
 
-// ─── Citation Popover ───────────────────────────────────────────────────────
+// ─── Citation Popover (light theme) ──────────────────────────────────────────
 function CitationPopover({
   snippet,
   page,
@@ -128,101 +128,23 @@ function CitationPopover({
   onViewFullPage?: () => void;
 }) {
   return (
-    <div
-      className="citation-popover"
-      style={{
-        position: "absolute",
-        left: "calc(100% + 12px)",
-        top: "50%",
-        transform: "translateY(-50%)",
-        zIndex: 100,
-        width: 300,
-        background: "#0d1117",
-        border: "1px solid #30363d",
-        borderRadius: 8,
-        boxShadow: "0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
-        overflow: "hidden",
-        pointerEvents: "auto",
-      }}
-    >
-      <div
-        style={{
-          padding: "8px 12px",
-          borderBottom: "1px solid #21262d",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "#161b22",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10,
-            color: "#8b949e",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-          }}
-        >
+    <div className="absolute left-full top-1/2 -translate-y-1/2 z-[100] w-[300px] ml-3 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden pointer-events-auto">
+      <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">
           Source · Page {page}
         </span>
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 9,
-            color: "#3fb950",
-            background: "rgba(63,185,80,0.1)",
-            padding: "2px 6px",
-            borderRadius: 3,
-          }}
-        >
+        <span className="text-[9px] text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">
           UDRAI
         </span>
       </div>
-      <div
-        style={{
-          margin: 12,
-          padding: 12,
-          background: "#0a0d12",
-          border: "1px solid #21262d",
-          borderRadius: 6,
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 11,
-          lineHeight: 1.7,
-          color: "#c9d1d9",
-          whiteSpace: "pre-wrap",
-          position: "relative",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)",
-            pointerEvents: "none",
-            borderRadius: 6,
-          }}
-        />
+      <div className="m-3 p-3 bg-gray-50 border border-gray-100 rounded-md text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-mono">
         {snippet}
       </div>
-      <div style={{ padding: "8px 12px 10px", display: "flex", justifyContent: "flex-end" }}>
+      <div className="px-3 py-2 flex justify-end border-t border-gray-100">
         <button
           type="button"
           onClick={onViewFullPage}
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10,
-            color: "#58a6ff",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            letterSpacing: "0.04em",
-            padding: 0,
-          }}
+          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
         >
           View Full Page →
         </button>
@@ -253,7 +175,7 @@ function SourceButton({
   }, [open]);
 
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-flex" }}>
+    <div ref={ref} className="relative inline-flex">
       <button
         type="button"
         onMouseEnter={() => setOpen(true)}
@@ -264,20 +186,9 @@ function SourceButton({
         }}
         onClick={() => setOpen((v) => !v)}
         title="View source"
-        style={{
-          width: 26,
-          height: 26,
-          borderRadius: 6,
-          border: "1px solid #30363d",
-          background: open ? "#21262d" : "transparent",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "all 0.15s ease",
-          flexShrink: 0,
-          color: "#8b949e",
-        }}
+        className={`w-[26px] h-[26px] rounded-md border flex items-center justify-center flex-shrink-0 text-gray-500 transition-colors ${
+          open ? "border-gray-300 bg-gray-100" : "border-gray-200 hover:bg-gray-50"
+        }`}
       >
         <svg
           width="12"
@@ -331,165 +242,48 @@ function DataRow({
 
   return (
     <div
-      className="data-row"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr auto auto",
-        gap: "12px",
-        alignItems: "center",
-        padding: "14px 20px",
-        borderBottom: "1px solid #161b22",
-        background: index % 2 === 0 ? "transparent" : "rgba(255,255,255,0.012)",
-        transition: "background 0.15s",
-      }}
+      className={`grid grid-cols-[1fr_auto_auto] gap-3 items-center py-3.5 px-5 border-b border-gray-100 transition-colors hover:bg-gray-50/80 ${
+        index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+      }`}
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          paddingLeft: field.nested ? 20 : 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div className="flex flex-col gap-1.5 pl-0" style={{ paddingLeft: field.nested ? 20 : 0 }}>
+        <div className="flex items-center gap-1.5">
           {field.nested && (
-            <div
-              style={{
-                width: 2,
-                height: 32,
-                background: "#30363d",
-                borderRadius: 2,
-                flexShrink: 0,
-                position: "relative",
-                top: -2,
-              }}
-            />
+            <div className="w-0.5 h-8 bg-gray-300 rounded flex-shrink-0 -mt-0.5" />
           )}
-          <span
-            style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 11,
-              color: "#8b949e",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {field.question}
-          </span>
+          <span className="text-xs text-gray-500 font-medium">{field.question}</span>
         </div>
         {high ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 15,
-                color: "#e6edf3",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {field.answer}
-            </span>
-            <span
-              style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 9,
-                background: "rgba(63,185,80,0.12)",
-                color: "#3fb950",
-                border: "1px solid rgba(63,185,80,0.25)",
-                padding: "2px 6px",
-                borderRadius: 4,
-                letterSpacing: "0.06em",
-              }}
-            >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-gray-900">{field.answer}</span>
+            <span className="text-[10px] bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded font-medium">
               ✓ {field.confidence}% MATCH
             </span>
           </div>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               value={editVal}
               onChange={(e) => setEditVal(e.target.value)}
               onBlur={handleSave}
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 15,
-                color: "#e6edf3",
-                background: "rgba(210,153,34,0.07)",
-                border: "1.5px solid rgba(210,153,34,0.55)",
-                borderRadius: 6,
-                padding: "4px 10px",
-                outline: "none",
-                width: 220,
-                letterSpacing: "-0.01em",
-                transition: "border-color 0.2s, box-shadow 0.2s",
-              }}
-              onFocus={(e) => {
-                e.target.style.boxShadow = "0 0 0 3px rgba(210,153,34,0.18)";
-                e.target.style.borderColor = "rgba(210,153,34,0.9)";
-              }}
-              onBlur={(e) => {
-                e.target.style.boxShadow = "none";
-                e.target.style.borderColor = "rgba(210,153,34,0.55)";
-              }}
+              className="text-sm text-gray-900 w-[220px] px-2.5 py-1 rounded-md border border-amber-300 bg-amber-50/50 outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-400"
             />
             {saved && (
-              <span
-                style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 9,
-                  color: "#3fb950",
-                }}
-              >
-                ✓ Saved
-              </span>
+              <span className="text-[10px] text-green-600 font-medium">✓ Saved</span>
             )}
           </div>
         )}
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 4,
-          minWidth: 44,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 11,
-            fontWeight: 600,
-            color: high ? "#3fb950" : "#d29522",
-          }}
-        >
+      <div className="flex flex-col items-center gap-1 min-w-[44px]">
+        <span className={`text-xs font-semibold ${high ? "text-green-600" : "text-amber-600"}`}>
           {field.confidence}%
         </span>
-        <div
-          style={{
-            width: 36,
-            height: 4,
-            background: "#21262d",
-            borderRadius: 99,
-            overflow: "hidden",
-          }}
-        >
+        <div className="w-9 h-1 bg-gray-200 rounded-full overflow-hidden">
           <div
-            style={{
-              width: `${field.confidence}%`,
-              height: "100%",
-              background: high
-                ? "linear-gradient(90deg, #3fb950, #56d364)"
-                : "linear-gradient(90deg, #d29522, #e3b341)",
-              borderRadius: 99,
-              transition: "width 0.6s ease",
-            }}
+            className={`h-full rounded-full transition-[width] duration-300 ${
+              high ? "bg-green-500" : "bg-amber-500"
+            }`}
+            style={{ width: `${field.confidence}%` }}
           />
         </div>
       </div>
@@ -511,156 +305,53 @@ export interface DRAISectionProps {
 }
 
 export default function DRAISection({
-  data,
-  documents = [],
+  data: _data,
+  documents: _documents = [],
   onCitationClick,
   donorId,
 }: DRAISectionProps) {
   const donorDisplayId = donorId || "#81028";
 
   return (
-    <>
-      <style>{`
-        .drai-card-wrap .data-row:hover {
-          background: rgba(255,255,255,0.025) !important;
-        }
-      `}</style>
-      <div
-        style={{
-          minHeight: "60vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          padding: "24px 20px 48px",
-          fontFamily: "'Space Grotesk', sans-serif",
-        }}
-      >
-        <div
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10,
-            color: "#484f58",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <span>Queue</span>
-          <span style={{ color: "#30363d" }}>›</span>
-          <span>Donor Records</span>
-          <span style={{ color: "#30363d" }}>›</span>
-          <span style={{ color: "#8b949e" }}>{donorDisplayId}</span>
-        </div>
-
-        <div
-          className="drai-card-wrap"
-          style={{
-            width: "100%",
-            maxWidth: 680,
-            background: "#0d1117",
-            border: "1px solid #21262d",
-            borderRadius: 12,
-            overflow: "visible",
-            boxShadow:
-              "0 24px 80px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05) inset",
-          }}
-        >
-          <div
-            style={{
-              padding: "20px 20px 18px",
-              borderBottom: "1px solid #21262d",
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%)",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span
-                  style={{
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: 18,
-                    fontWeight: 500,
-                    color: "#e6edf3",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Donor ID: {donorDisplayId}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span
-                  style={{
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: 11,
-                    color: "#484f58",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Document:
-                </span>
-                <span
-                  style={{
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: 11,
-                    color: "#58a6ff",
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  UDRAI — Donor Risk Assessment Interview
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto auto",
-              gap: 12,
-              padding: "8px 20px",
-              borderBottom: "1px solid #161b22",
-              background: "#090c10",
-            }}
-          >
-            {["Extracted Field / Answer", "Conf.", "Src"].map((h, i) => (
-              <span
-                key={h}
-                style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 9,
-                  color: "#484f58",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  textAlign: i > 0 ? "center" : "left",
-                }}
-              >
-                {h}
-              </span>
-            ))}
-          </div>
-
-          <div>
-            {FIELDS.map((field, i) => (
-              <DataRow
-                key={field.id}
-                field={field}
-                index={i}
-                onCitationClick={(docName, pageNum) =>
-                  onCitationClick?.(docName, pageNum, undefined)
-                }
-              />
-            ))}
-          </div>
+    <div className="bg-white rounded-lg shadow overflow-visible">
+      <div className="px-6 pt-5 pb-4 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          Donor Risk Assessment Interview (DRAI)
+        </h3>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>Donor ID: {donorDisplayId}</span>
+          <span className="text-gray-300">·</span>
+          <span className="text-blue-600 font-medium uppercase tracking-wide">
+            UDRAI — Donor Risk Assessment Interview
+          </span>
         </div>
       </div>
-    </>
+
+      <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-5 py-2 border-b border-gray-200 bg-gray-50/80">
+        {["Extracted Field / Answer", "Conf.", "Src"].map((h, i) => (
+          <span
+            key={h}
+            className={`text-[10px] text-gray-500 uppercase tracking-wider font-medium ${
+              i > 0 ? "text-center" : "text-left"
+            }`}
+          >
+            {h}
+          </span>
+        ))}
+      </div>
+
+      <div>
+        {FIELDS.map((field, i) => (
+          <DataRow
+            key={field.id}
+            field={field}
+            index={i}
+            onCitationClick={(docName, pageNum) =>
+              onCitationClick?.(docName, pageNum, undefined)
+            }
+          />
+        ))}
+      </div>
+    </div>
   );
 }
